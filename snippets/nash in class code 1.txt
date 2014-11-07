@@ -1,0 +1,45 @@
+*-----------------------------------------------------------
+* Title      :
+* Written by :
+* Date       :
+* Description:
+*-----------------------------------------------------------
+CR  EQU $0D
+LF  EQU $0A
+
+    ORG    $1000
+
+START:                  ; first instruction of program
+
+    LEA     CSTRING, A1
+    MOVE.B  #14, D0
+    TRAP    #15
+
+    MOVE.B  #1, D0
+    MOVE.B  #1, D1
+
+    CMP.B   D0,D1
+    BEQ     IF_BODY
+    BRA     IF_DONE
+    
+IF_BODY:
+    LEA EQUALS, A1
+    MOVE.B  #14, D0
+    TRAP #15
+    
+IF_DONE:
+    LEA BYE,A1
+    MOVE.B  #14, D0
+    TRAP #15
+
+SIMHALT
+
+CSTRING DC.B 'THIS IS A STRING',0 
+EQUALS  DC.B '==',CR,LF,0
+BYE     DC.B 'CIAO',CR,LF,0
+
+
+
+* Put variables and constants here
+
+    END    START        ; last line of source
