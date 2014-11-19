@@ -4,8 +4,8 @@
 * Date       :
 * Description:
 *-----------------------------------------------------------
-    ORG    $1000
-START:                  ; first instruction of program
+    
+START:  ORG    $1000            * first instruction of program
 
 * THINK ABOUT ASKING FOR VALID START/END NO NEGATIVE ADDR
 
@@ -61,6 +61,7 @@ NEWLINE     DC.B    CR,LF,0
 
 END
     END    START        ; last line of source
+
 
 
 
