@@ -8,22 +8,22 @@
     
 
 
-OP_0000     EQU     %0000
-OP_0001     EQU     %0001
-OP_0010     EQU     %0010
-OP_0011     EQU     %0011
-OP_0100     EQU     %0100     
-OP_0101     EQU     %0101
-OP_0110     EQU     %0110
-OP_0111     EQU     %0111
-OP_1000     EQU     %1000
-OP_1001     EQU     %1001
-OP_1010     EQU     %1010
-OP_1011     EQU     %1011
-OP_1100     EQU     %1100
-OP_1101     EQU     %1101
-OP_1110     EQU     %1110
-OP_1111     EQU     %1111
+OP_0000     EQU     %0000000000000000
+OP_0001     EQU     %0001000000000000
+OP_0010     EQU     %0010000000000000
+OP_0011     EQU     %0011000000000000
+OP_0100     EQU     %0100000000000000
+OP_0101     EQU     %0101000000000000
+OP_0110     EQU     %0110000000000000
+OP_0111     EQU     %0111000000000000
+OP_1000     EQU     %1000000000000000
+OP_1001     EQU     %1001000000000000
+OP_1010     EQU     %1010000000000000
+OP_1011     EQU     %1011000000000000
+OP_1100     EQU     %1100000000000000
+OP_1101     EQU     %1101000000000000
+OP_1110     EQU     %1110000000000000
+OP_1111     EQU     %1111000000000000
 
 BITMASK     EQU     $F000      * used to bitmask the first nibble
 
@@ -63,9 +63,6 @@ LOOP
         
         AND.W   D1,D2           * Apply this bitmask
         
-        ASR     #8,D2           * Shift the bit over to compair
-        ASR     #4,D2           * Can only bitshift by 8, we need 12
-        
         CMP     #OP_0100,D2     * Does the operation start with 0100?
         BNE     NEXT16          * No, check next case
         BSR     OP0100
@@ -85,14 +82,14 @@ ITERATION
         BRA     LOOP            * Otherwise, branch back to LOOP
 
 OP0100
-        MOVEM   D0-D1/A0-A6,-(A7) * Push values to the stack to save
+        MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
         
         LEA     NOOPERATION,A1
         
         MOVE.B  #14,D0          * Print a newline
         TRAP    #15
         
-        MOVEM   (A7)+,D0-D1/A0-A6 * Push values to the stack to pop
+        MOVEM   (A7)+,D0-D1/A0-A1 * Push values to the stack to pop
         
         RTS
 
