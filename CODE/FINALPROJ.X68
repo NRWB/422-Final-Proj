@@ -31,9 +31,15 @@ START:                  ; first instruction of program
         TRAP    #15             * Perform Trap #4
         MOVE.L  D1,D5           * Move the ending address into D5. This is the ending address.
         
+        LEA     NEWLINE,A1      * Store newline variable for seperating operations
+        
 LOOP    MOVE.W  (A2)+,D1        * Read an operation into D1        
         MOVE.B  #3,D0           * Print out what we just found
         TRAP    #15             * Perform Trap #3
+        
+        MOVE.B  #14,D0          * Print a newline
+        TRAP    #15
+        
         CMP     A2,D5           * Compare the starting address to ending address
         BEQ     END             * If they are equal, branch 
         BRA     LOOP            * Otherwise, branch back to LOOP
@@ -43,6 +49,7 @@ CR      EQU     $0D
 LF      EQU     $0A
 MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
 MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
+NEWLINE     DC.B    CR,LF,0
 
 * Put variables and constants here
 
@@ -54,6 +61,7 @@ MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 
 END
     END    START        ; last line of source
+
 
 
 
