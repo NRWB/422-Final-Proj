@@ -1,8 +1,9 @@
 *-----------------------------------------------------------
-* Title      :
-* Written by :
-* Date       :
-* Description:
+* Title      : 68K Decompiler
+* Written by : Nick Bell, Sammy Nimnuch, Caleb Larson
+* Date       : 11/2014
+* Description: This program decompiles other 68K programs
+*              which are loaded into the simulator simultaneously.
 *-----------------------------------------------------------
     
 
@@ -24,7 +25,7 @@ OP_1101     EQU     %1101
 OP_1110     EQU     %1110
 OP_1111     EQU     %1111
 
-BITMASK     EQU     $F000       * used to bitmask the first nibble
+BITMASK     EQU     $F000      * used to bitmask the first nibble
 
 START:  ORG    $1000            * first instruction of program
 
@@ -54,10 +55,18 @@ START:  ORG    $1000            * first instruction of program
         
         LEA     NEWLINE,A1      * Store newline variable for seperating operations
         
+        
 LOOP    
+        MOVE.W  #BITMASK,D2      * Load the bitmask into data register D2
+        
         MOVE.W  (A2)+,D1        * Read an operation into D1
         
-        CMP     #OP_0100,D1     * Does the operation start with 0100?
+        AND.W   D1,D2           * Apply this bitmask
+        
+        ASR     #8,D2           * Shift the bit over to compair
+        ASR     #4,D2           * Can only bitshift by 8, we need 12
+        
+        CMP     #OP_0100,D2     * Does the operation start with 0100?
         BNE     NEXT16          * No, check next case
         BSR     OP0100
         BRA     ITERATION       * Move to next iteration of the loop
@@ -98,6 +107,7 @@ NOOPERATION DC.B    'NOP',0
 
     ORG $4000
 
+    NOP
     MOVE.B   #%10011010, D0
     MOVE.B   #%10101001, D1
     ADD.B    D0,D1
@@ -105,6 +115,7 @@ NOOPERATION DC.B    'NOP',0
 
 END
     END    START        ; last line of source
+
 
 
 
