@@ -4,10 +4,9 @@
 * Date       :
 * Description:
 *-----------------------------------------------------------
-<<<<<<< HEAD
     
-START:  ORG    $1000            * first instruction of program
-=======
+
+
 OP_0000     EQU     %0000
 OP_0001     EQU     %0001
 OP_0010     EQU     %0010
@@ -25,10 +24,9 @@ OP_1101     EQU     %1101
 OP_1110     EQU     %1110
 OP_1111     EQU     %1111
 
+BITMASK     EQU     $F000       * used to bitmask the first nibble
 
-    ORG    $1000
-START:                  ; first instruction of program
->>>>>>> origin/master
+START:  ORG    $1000            * first instruction of program
 
 * THINK ABOUT ASKING FOR VALID START/END NO NEGATIVE ADDR
 
@@ -56,23 +54,45 @@ START:                  ; first instruction of program
         
         LEA     NEWLINE,A1      * Store newline variable for seperating operations
         
-LOOP    MOVE.W  (A2)+,D1        * Read an operation into D1        
-        MOVE.B  #3,D0           * Print out what we just found
+LOOP    
+        MOVE.W  (A2)+,D1        * Read an operation into D1
+        
+        CMP     #OP_0100,D1     * Does the operation start with 0100?
+        BNE     NEXT16          * No, check next case
+        BSR     OP0100
+        BRA     ITERATION       * Move to next iteration of the loop
+        
+NEXT16
+        MOVE.B  #3,D0           * Print out operation we don't recognize
         TRAP    #15             * Perform Trap #3
         
+ITERATION
+
         MOVE.B  #14,D0          * Print a newline
         TRAP    #15
-        
+
         CMP     A2,D5           * Compare the starting address to ending address
         BEQ     END             * If they are equal, branch 
         BRA     LOOP            * Otherwise, branch back to LOOP
 
+OP0100
+        MOVEM   D0-D1/A0-A6,-(A7) * Push values to the stack to save
+        
+        LEA     NOOPERATION,A1
+        
+        MOVE.B  #14,D0          * Print a newline
+        TRAP    #15
+        
+        MOVEM   (A7)+,D0-D1/A0-A6 * Push values to the stack to pop
+        
+        RTS
 
 CR      EQU     $0D
 LF      EQU     $0A
 MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
 MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
+NOOPERATION DC.B    'NOP',0
 
 * Put variables and constants here
 
@@ -81,9 +101,11 @@ NEWLINE     DC.B    CR,LF,0
     MOVE.B   #%10011010, D0
     MOVE.B   #%10101001, D1
     ADD.B    D0,D1
+    NOP
 
 END
     END    START        ; last line of source
+
 
 
 

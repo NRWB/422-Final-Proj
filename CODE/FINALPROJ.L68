@@ -1,6 +1,6 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.15.02
-Created On: 11/18/2014 6:31:26 PM
+Created On: 11/18/2014 7:27:15 PM
 
 00000000                             1  *-----------------------------------------------------------
 00000000                             2  * Title      :
@@ -8,66 +8,107 @@ Created On: 11/18/2014 6:31:26 PM
 00000000                             4  * Date       :
 00000000                             5  * Description:
 00000000                             6  *-----------------------------------------------------------
-00000000  =00000000                  7  OP_0000     EQU     %0000
+00000000                             7      
 00000000                             8  
 00000000                             9  
-00001000                            10      ORG    $1000
-00001000                            11  START:                  ; first instruction of program
-00001000                            12  
-00001000                            13  * THINK ABOUT ASKING FOR VALID START/END NO NEGATIVE ADDR
-00001000                            14  
-00001000                            15  * LOAD MSGSTART, ASK FOR INPUT
-00001000  43F9 00001044             16          LEA     MSGSTART,A1     * Load MESSAGE START
-00001006  103C 000E                 17          MOVE.B  #14,D0          * Trap #14 to display message
-0000100A  4E4F                      18          TRAP    #15             * Perform #14
-0000100C                            19          
-0000100C                            20  * GETS THE STARTING ADDRESS
-0000100C  103C 0004                 21          MOVE.B  #4,D0           * Trap #4 gets an input and stores in D1
-00001010  4E4F                      22          TRAP    #15             * Perform #15
-00001012                            23          
-00001012                            24  * MOVE IT TO ANOTHER ADDRESS REGISTER
-00001012  2441                      25          MOVEA.L D1,A2           * Move the user input into A2. This is the starting address.
-00001014                            26  
-00001014                            27  * LOAD MSGSTART, ASK FOR INPUT
-00001014  43F9 0000105C             28          LEA     MSGEND,A1       * Load MESSAGE END
-0000101A  303C 000E                 29          MOVE.W  #14,D0          * Trap #14 to display message
-0000101E  4E4F                      30          TRAP    #15             * Perform #14
-00001020                            31          
-00001020                            32  * GETS THE ENDING ADDRESS
-00001020  103C 0004                 33          MOVE.B  #4,D0           * Trap #4 gets an inptu and stores in D1
-00001024  4E4F                      34          TRAP    #15             * Perform Trap #4
-00001026  2A01                      35          MOVE.L  D1,D5           * Move the ending address into D5. This is the ending address.
-00001028                            36          
-00001028  43F9 00001072             37          LEA     NEWLINE,A1      * Store newline variable for seperating operations
-0000102E                            38          
-0000102E  321A                      39  LOOP    MOVE.W  (A2)+,D1        * Read an operation into D1        
-00001030  103C 0003                 40          MOVE.B  #3,D0           * Print out what we just found
-00001034  4E4F                      41          TRAP    #15             * Perform Trap #3
-00001036                            42          
-00001036  103C 000E                 43          MOVE.B  #14,D0          * Print a newline
-0000103A  4E4F                      44          TRAP    #15
-0000103C                            45          
-0000103C  BA4A                      46          CMP     A2,D5           * Compare the starting address to ending address
-0000103E  6700 2FCA                 47          BEQ     END             * If they are equal, branch 
-00001042  60EA                      48          BRA     LOOP            * Otherwise, branch back to LOOP
-00001044                            49  
-00001044                            50  
-00001044  =0000000D                 51  CR      EQU     $0D
-00001044  =0000000A                 52  LF      EQU     $0A
-00001044= 45 4E 54 45 52 20 ...     53  MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
-0000105C= 45 4E 54 45 52 20 ...     54  MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
-00001072= 0D 0A 00                  55  NEWLINE     DC.B    CR,LF,0
-00001075                            56  
-00001075                            57  * Put variables and constants here
-00001075                            58  
-00004000                            59      ORG $4000
-00004000                            60  
-00004000  103C 009A                 61      MOVE.B   #%10011010, D0
-00004004  123C 00A9                 62      MOVE.B   #%10101001, D1
-00004008  D200                      63      ADD.B    D0,D1
-0000400A                            64  
-0000400A                            65  END
-0000400A                            66      END    START        ; last line of source
+00000000  =00000000                 10  OP_0000     EQU     %0000
+00000000  =00000001                 11  OP_0001     EQU     %0001
+00000000  =00000002                 12  OP_0010     EQU     %0010
+00000000  =00000003                 13  OP_0011     EQU     %0011
+00000000  =00000004                 14  OP_0100     EQU     %0100     
+00000000  =00000005                 15  OP_0101     EQU     %0101
+00000000  =00000006                 16  OP_0110     EQU     %0110
+00000000  =00000007                 17  OP_0111     EQU     %0111
+00000000  =00000008                 18  OP_1000     EQU     %1000
+00000000  =00000009                 19  OP_1001     EQU     %1001
+00000000  =0000000A                 20  OP_1010     EQU     %1010
+00000000  =0000000B                 21  OP_1011     EQU     %1011
+00000000  =0000000C                 22  OP_1100     EQU     %1100
+00000000  =0000000D                 23  OP_1101     EQU     %1101
+00000000  =0000000E                 24  OP_1110     EQU     %1110
+00000000  =0000000F                 25  OP_1111     EQU     %1111
+00000000                            26  
+00000000  =0000F000                 27  BITMASK     EQU     $F000       * used to bitmask the first nibble
+00000000                            28  
+00001000                            29  START:  ORG    $1000            * first instruction of program
+00001000                            30  
+00001000                            31  * THINK ABOUT ASKING FOR VALID START/END NO NEGATIVE ADDR
+00001000                            32  
+00001000                            33  * LOAD MSGSTART, ASK FOR INPUT
+00001000  43F9 0000106A             34          LEA     MSGSTART,A1     * Load MESSAGE START
+00001006  103C 000E                 35          MOVE.B  #14,D0          * Trap #14 to display message
+0000100A  4E4F                      36          TRAP    #15             * Perform #14
+0000100C                            37          
+0000100C                            38  * GETS THE STARTING ADDRESS
+0000100C  103C 0004                 39          MOVE.B  #4,D0           * Trap #4 gets an input and stores in D1
+00001010  4E4F                      40          TRAP    #15             * Perform #15
+00001012                            41          
+00001012                            42  * MOVE IT TO ANOTHER ADDRESS REGISTER
+00001012  2441                      43          MOVEA.L D1,A2           * Move the user input into A2. This is the starting address.
+00001014                            44  
+00001014                            45  * LOAD MSGSTART, ASK FOR INPUT
+00001014  43F9 00001082             46          LEA     MSGEND,A1       * Load MESSAGE END
+0000101A  303C 000E                 47          MOVE.W  #14,D0          * Trap #14 to display message
+0000101E  4E4F                      48          TRAP    #15             * Perform #14
+00001020                            49          
+00001020                            50  * GETS THE ENDING ADDRESS
+00001020  103C 0004                 51          MOVE.B  #4,D0           * Trap #4 gets an inptu and stores in D1
+00001024  4E4F                      52          TRAP    #15             * Perform Trap #4
+00001026  2A01                      53          MOVE.L  D1,D5           * Move the ending address into D5. This is the ending address.
+00001028                            54          
+00001028  43F9 00001098             55          LEA     NEWLINE,A1      * Store newline variable for seperating operations
+0000102E                            56          
+0000102E                            57  LOOP    
+0000102E  321A                      58          MOVE.W  (A2)+,D1        * Read an operation into D1
+00001030                            59          
+00001030  B27C 0004                 60          CMP     #OP_0100,D1     * Does the operation start with 0100?
+00001034  6600 000A                 61          BNE     NEXT16          * No, check next case
+00001038  6100 001A                 62          BSR     OP0100
+0000103C  6000 0008                 63          BRA     ITERATION       * Move to next iteration of the loop
+00001040                            64          
+00001040                            65  NEXT16
+00001040  103C 0003                 66          MOVE.B  #3,D0           * Print out operation we don't recognize
+00001044  4E4F                      67          TRAP    #15             * Perform Trap #3
+00001046                            68          
+00001046                            69  ITERATION
+00001046                            70  
+00001046  103C 000E                 71          MOVE.B  #14,D0          * Print a newline
+0000104A  4E4F                      72          TRAP    #15
+0000104C                            73  
+0000104C  BA4A                      74          CMP     A2,D5           * Compare the starting address to ending address
+0000104E  6700 2FBC                 75          BEQ     END             * If they are equal, branch 
+00001052  60DA                      76          BRA     LOOP            * Otherwise, branch back to LOOP
+00001054                            77  
+00001054                            78  OP0100
+00001054  48A7 C0FE                 79          MOVEM   D0-D1/A0-A6,-(A7) * Push values to the stack to save
+00001058                            80          
+00001058  43F9 0000109B             81          LEA     NOOPERATION,A1
+0000105E                            82          
+0000105E  103C 000E                 83          MOVE.B  #14,D0          * Print a newline
+00001062  4E4F                      84          TRAP    #15
+00001064                            85          
+00001064  4C9F 7F03                 86          MOVEM   (A7)+,D0-D1/A0-A6 * Push values to the stack to pop
+00001068                            87          
+00001068  4E75                      88          RTS
+0000106A                            89  
+0000106A  =0000000D                 90  CR      EQU     $0D
+0000106A  =0000000A                 91  LF      EQU     $0A
+0000106A= 45 4E 54 45 52 20 ...     92  MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
+00001082= 45 4E 54 45 52 20 ...     93  MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
+00001098= 0D 0A 00                  94  NEWLINE     DC.B    CR,LF,0
+0000109B= 4E 4F 50 00               95  NOOPERATION DC.B    'NOP',0
+0000109F                            96  
+0000109F                            97  * Put variables and constants here
+0000109F                            98  
+00004000                            99      ORG $4000
+00004000                           100  
+00004000  103C 009A                101      MOVE.B   #%10011010, D0
+00004004  123C 00A9                102      MOVE.B   #%10101001, D1
+00004008  D200                     103      ADD.B    D0,D1
+0000400A  4E71                     104      NOP
+0000400C                           105  
+0000400C                           106  END
+0000400C                           107      END    START        ; last line of source
 
 No errors detected
 No warnings generated
@@ -76,12 +117,32 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
+BITMASK             F000
 CR                  D
-END                 400A
+END                 400C
+ITERATION           1046
 LF                  A
 LOOP                102E
-MSGEND              105C
-MSGSTART            1044
-NEWLINE             1072
+MSGEND              1082
+MSGSTART            106A
+NEWLINE             1098
+NEXT16              1040
+NOOPERATION         109B
+OP0100              1054
 OP_0000             0
+OP_0001             1
+OP_0010             2
+OP_0011             3
+OP_0100             4
+OP_0101             5
+OP_0110             6
+OP_0111             7
+OP_1000             8
+OP_1001             9
+OP_1010             A
+OP_1011             B
+OP_1100             C
+OP_1101             D
+OP_1110             E
+OP_1111             F
 START               1000
