@@ -130,7 +130,10 @@ OP1101  * ADD, ADDA
 OP1110
 OP1111
 
-
+ * --- OP0100 -----------------------------------------------------------------
+ * @pre      D2 contains the opcode
+ *
+ * @post     all registers are returned to their previous state
 
 OP0100                          * TODO: CONSIDER ALL 0100 OPERATIONS
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
@@ -144,6 +147,10 @@ OP0100                          * TODO: CONSIDER ALL 0100 OPERATIONS
         
         RTS
 
+ * ----------------------------------------------------------------------------
+ * ----------------------------------------------------------------------------
+ * Constants for printing information to the console
+
 CR      EQU     $0D
 LF      EQU     $0A
 MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
@@ -151,13 +158,13 @@ MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
 NOOPERATION DC.B    'NOP',0
 
- * ---------------------------------------------------------------------------
- * ---------------------------------------------------------------------------
+ * ----------------------------------------------------------------------------
+ * ----------------------------------------------------------------------------
  * Data defined constants
  *   - B/W/L (representing Byte, Word, Long)
  *   - A0-A7 (representing the 8 address registers)
  *   - D0-D7 (representing the 8 data registers)
- * ---------------------------------------------------------------------------
+ * ----------------------------------------------------------------------------
 
 __B        DC.B    'B'
 __W        DC.B    'W'
@@ -197,6 +204,7 @@ __D7        DC.B   'D7'
 
 END
     END    START        ; last line of source
+
 
 
 
