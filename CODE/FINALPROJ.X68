@@ -7,9 +7,9 @@
 *   66  6      8  88  kkk  kk    
 *    66  6    8  88     kk  k
 *     66 66  88 88        kk
-*     6 ------- 8
-*    6  68k PRO  8
-*   6-------------8
+*     6 _______ 8
+*    6    68k    8
+*   6_____PRO_____8
 *  6               8        68k is as easy as
 *  6    0     0    8        6 - 8 - k !
 *  6   /   V   \   8 
@@ -103,7 +103,17 @@ ITERATION
         BEQ     END             * If they are equal, branch 
         BRA     LOOP            * Otherwise, branch back to LOOP
 
-OP0000
+OP0000  * BCLR, ORI, CMPI
+        * Compare 8th bit
+        * If 8th bit is 1, go to BCLR
+            * If bit 7 = 1 and 6 = 0, it is confirmed BCLR
+                * Check if mode and both registers is right
+        * Now compare bits 9,10,11
+            * If they're 000, go to ORI
+                * Check if size, mode, and register is right
+            * If they're 110, go to CMPI
+                * Check if size, mode, and register is right
+
 OP0001  * MOVE_BYTE,
 OP0010  * MOVE_LONG, MOVEA_LONG
 OP0011  * MOVE_WORD, MOVEA_WORD
@@ -187,6 +197,7 @@ __D7        DC.B   'D7'
 
 END
     END    START        ; last line of source
+
 
 
 
