@@ -89,7 +89,7 @@ OP0100
         MOVE.B  #14,D0          * Print a newline
         TRAP    #15
         
-        MOVEM   (A7)+,D0-D1/A0-A1 * Push values to the stack to pop
+        MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
         
         RTS
 
@@ -112,6 +112,7 @@ NOOPERATION DC.B    'NOP',0
 
 END
     END    START        ; last line of source
+
 
 
 
