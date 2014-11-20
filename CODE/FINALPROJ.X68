@@ -141,6 +141,40 @@ MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
 NOOPERATION DC.B    'NOP',0
 
+ * ---------------------------------------------------------------------------
+ * ---------------------------------------------------------------------------
+ * Data defined constants
+ *   - B/W/L (representing Byte, Word, Long)
+ *   - A0-A7 (representing the 8 address registers)
+ *   - D0-D7 (representing the 8 data registers)
+ * ---------------------------------------------------------------------------
+
+__B        DC.B    'B'
+__W        DC.B    'W'
+__L        DC.B    'L'
+
+__A0        DC.B   'A0'
+__A1        DC.B   'A1'    
+__A2        DC.B   'A2'
+__A3        DC.B   'A3'
+__A4        DC.B   'A4'
+__A5        DC.B   'A5'
+__A6        DC.B   'A6'
+__A7        DC.B   'A7'
+
+__D0        DC.B   'D0'
+__D1        DC.B   'D1'
+__D2        DC.B   'D2'
+__D3        DC.B   'D3'
+__D4        DC.B   'D4'
+__D5        DC.B   'D5'
+__D6        DC.B   'D6'
+__D7        DC.B   'D7'
+ * ---------------------------------------------------------------------------
+ * End of definition segment
+ * ---------------------------------------------------------------------------
+ * ---------------------------------------------------------------------------
+
 * Put variables and constants here
 
     ORG $4000
