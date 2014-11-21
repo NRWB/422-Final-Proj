@@ -86,6 +86,7 @@ LOOP
         MOVE.W  #BITMASK,D2     * Load the bitmask into data register D2
         MOVE.W  (A2)+,D1        * Read an operation into D1
         AND.W   D1,D2           * Apply this bitmask
+        
         CMP     #OP_0100,D2     * Does the operation start with 0100?
         BNE     NEXT16          * No, check next case
         BSR     OP0100          * Branch to subroutine 0100
@@ -129,6 +130,16 @@ OP1100  * MULS,
 OP1101  * ADD, ADDA
 OP1110
 OP1111
+
+ * --- BITMASK ----------------------------------------------------------------
+ *@pre      D6 contains the starting bit you want masked, D7 the ending bit
+ *
+ *@post     D6 contains the bitmask, ready for use
+ 
+BITMASK
+        MOVE    D5,(A7)- * push D5 onto the stack so we can use it
+        
+LOOP
 
  * --- OP0100 -----------------------------------------------------------------
  * @pre      D2 contains the opcode
@@ -204,6 +215,7 @@ __D7        DC.B   'D7'
 
 END
     END    START        ; last line of source
+
 
 
 
