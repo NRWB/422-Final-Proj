@@ -49,7 +49,7 @@ OP_1101     EQU     %1101000000000000
 OP_1110     EQU     %1110000000000000
 OP_1111     EQU     %1111000000000000
 
-BITMASK     EQU     $F000       * used to bitmask the first nibble
+* BITMASK     EQU     $F000       * used to bitmask the first nibble
 
 START:  ORG    $1000            * first instruction of program
 
@@ -79,11 +79,18 @@ START:  ORG    $1000            * first instruction of program
 * GETS THE ENDING ADDRESS
         MOVE.B  #4,D0           * Trap #4 gets an input and stores in D1
         TRAP    #15             * Perform Trap #4
-        MOVE.L  D1,D5           * Move the ending address into D5. This is the ending address.
-        LEA     NEWLINE,A1      * Store newline variable for seperating operations
+        MOVE.L  D1,D5           * Move the ending address into D5
+        LEA     NEWLINE,A1      * Store newline variable for seper opcodes
+        
+        MOVE.W  #15,D7          * prep D7 for bitmask subroutine
+        MOVE.W  #12,D6          * prep D6 for bitmask subroutine
+        BSR     BITMASK         * obtain a bitmask that goes from 12-15 (inclusive)
+        MOVE.W  D6,D2           * move the bitmask to D2
         
 LOOP    
-        MOVE.W  #BITMASK,D2     * Load the bitmask into data register D2
+        
+        * MOVE.W  #BITMASK,D2     * Load the bitmask into data register D2
+        MOVE    D2,-(A7)        * save the bitmask
         MOVE.W  (A2)+,D1        * Read an operation into D1
         AND.W   D1,D2           * Apply this bitmask
         
@@ -97,6 +104,8 @@ NEXT16
         TRAP    #15             * Perform Trap #3
         
 ITERATION
+        MOVE    (A7)+,D2        * restore the bitmask to its previous state
+
         MOVE.B  #14,D0          * Print a newline
         TRAP    #15             * Perform Trap #14
 
@@ -137,10 +146,22 @@ OP1111
  *@post     D6 contains the bitmask, ready for use
  
 BITMASK
-        MOVE    D5,(A7)- * push D5 onto the stack so we can use it
+        MOVE    D5,-(A7)    * push D5 onto the stack so we can use it to
+        CLR     D5          * clear D5 so we can use it
+LOOPBIT 
+        BSET    D6,D5       * set the D6th bit in D5 to 1
+        ADD     #1,D6       * increment D6
         
-LOOP
+        CMP     D7,D6       * have we finished?
+        BGT     BITMASKDONE * yes
+        BRA     LOOPBIT     * no, iterate again
+        
+BITMASKDONE
 
+        MOVE.L  D5,D6
+        MOVE    (A7)+,D5    * restore D5
+        RTS
+        
  * --- OP0100 -----------------------------------------------------------------
  * @pre      D2 contains the opcode
  *
@@ -215,6 +236,7 @@ __D7        DC.B   'D7'
 
 END
     END    START        ; last line of source
+
 
 
 
