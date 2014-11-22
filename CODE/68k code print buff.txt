@@ -1,0 +1,132 @@
+ * ===========================================================================
+ * ---------------------------------------------------------------------------
+ * Section Title : I/O Functionality
+ * Description   : User must account for Carriage Return and Line Feed chars.
+ *                 80 means 80, not 82. ;)
+ * ---------------------------------------------------------------------------
+ * [+]Start[+]
+ 
+MAX_BUFF_COUNT EQU 80 * maintains the idea of holding a maximum of 80 characters per line
+
+ * [-]End[-]
+ * ===========================================================================
+
+
+
+* ===========================================================================
+ * ---------------------------------------------------------------------------
+ * Section Title : I/O Functionality
+ * Function Name : LOAD_BUFFER
+ * Description   : Loads and readies the buffer
+ * Registers Used:
+ *         - A4 = Holds the buffer until buffer is unloaded.
+ *                The contents are stored onto the stack until A4 is unloaded.
+ * ---------------------------------------------------------------------------
+ * [+]Start[+]
+ 
+LOAD_BUFFER MOVEM.L A4,-(SP)    * save contents of A4 before over-write
+            MOVE.L LINE_BUFF,A4 * specify 80 bytes to be stored at the
+                                * addr location of LINE_BUFF, starting
+                                * from the initial A4 register addr
+			CLR.L A4            * delete anything in buffer
+			                    * (ex. from a previously loaded buffer)
+			RTS
+
+ * [-]End[-]
+ * ===========================================================================
+
+
+
+ * ===========================================================================
+ * ---------------------------------------------------------------------------
+ * Section Title : I/O Functionality
+ * Function Name : ADD_B_BUFFER
+ * Description   : Adds a single byte to the buffer (Inputted from A3)
+ * Pre-Condition : Don't need to save A4 here, as it is still in use from
+ *                 the LOAD_BUFFER function.
+*                 (Perhaps add a check in here to ensure A4 was loaded as the buffer)
+ * Registers Used:
+ *         - A3 = Holds a byte of data to be appended into the buffer.
+ *         - A4 = inherently from the pre-defined/pre-condition of LOAD_BUFFER
+ * ---------------------------------------------------------------------------
+ * [+]Start[+]
+ 
+ADD_B_BUFFER MOVE.B (A3),(A4)+ * increase the ptr in the buffer to the next byte position
+             RTS
+
+ * [-]End[-]
+ * ===========================================================================
+
+
+
+ * ===========================================================================
+ * ---------------------------------------------------------------------------
+ * Section Title : I/O Functionality
+ * Function Name : PRINT_BUFFER
+ * Description   : Output the buffer to console
+ * Pre-Condition : Don't need to save A4 here, as it is still in use from
+ *                 the LOAD_BUFFER function.
+ *                 (Perhaps add a check in here to ensure A4 was loaded as the buffer)
+ * Registers Used:
+ *         - D0 = Holds the trap task 14 for data output
+ *                
+ *         - A3 = Allow loading into buffer of the carriage return and line feed chars.
+ *                
+ *         - A4 = inherently from the pre-defined/pre-condition of LOAD_BUFFER
+ * ---------------------------------------------------------------------------
+ * [+]Start[+]
+ 
+PRINT_BUFFER MOVEM.L D0-D3/A1-A4,-(SP) * save the data contents to stack
+             CLR.L D0 * clears D0 for trap task
+			 CLR.L A3
+			 
+			 * clear A1? clear D1? clear D2? clear D3?
+             
+			 LEA CR,A3
+			 ADD_B_BUFFER
+			 LEA LF,A3
+			 ADD_B_BUFFER
+			 
+			 MOVE.B 14,D0 * move/load in the trap task 14 into D0
+			 
+			 LEA LINE_BUFF,A1 * move LINE_BUFF into A1 for output
+			 
+			 MOVE.L A4,D2 * mark the end of the buffer
+			 MOVE.L A1,D3 * mark the start of the buffer
+			 
+			 SUB.L D2,D3 * obtain length of buffer into D3
+			 
+			 MOVE.L D3,D1 * let trap task know the length of output buffer
+			 
+			 Trap #15 * feed buffer to output console
+			 
+			 MOVEM.L (SP)+,D0-D3/A1-A4 * Re-Load in registers
+
+ * [-]End[-]
+ * ===========================================================================
+
+
+
+ * ===========================================================================
+ * ---------------------------------------------------------------------------
+ * Section Title : I/O Functionality
+ * Description   : x
+ * ---------------------------------------------------------------------------
+ * [+]Start[+]
+ 
+LINE_BUFF DS.B 80 * Allocates 80 bytes sequentially at a time
+CURR_BUFF_COUNT DS.W 1 * Hold the count for bytes held on a line, in a word
+
+ * [-]End[-]
+ * ===========================================================================
+ 
+ 
+ 
+ 
+ 
+ 
+ * to do
+__SPACE     DC.B   ' '
+__CURR_LINE DC.B   1
+PRINT_ADDR_REG * (label to implement)
+PRINT_DATA_REG * (label to implement)
