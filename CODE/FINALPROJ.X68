@@ -113,7 +113,13 @@ ITERATION
         BEQ     END             * If they are equal, branch 
         BRA     LOOP            * Otherwise, branch back to LOOP
 
-OP0000  * BCLR, ORI, CMPI
+* --- OP 0000 ------------------------------------------
+* FUNCTIONS     BCLR, ORI, CMPI
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask. 
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
+OP0000
         * Compare 8th bit
         * If 8th bit is 1, go to BCLR
             * If bit 7 = 1 and 6 = 0, it is confirmed BCLR
@@ -124,21 +130,167 @@ OP0000  * BCLR, ORI, CMPI
             * If they're 110, go to CMPI
                 * Check if size, mode, and register is right
 
-OP0001  * MOVE_BYTE,
-OP0010  * MOVE_LONG, MOVEA_LONG
-OP0011  * MOVE_WORD, MOVEA_WORD
-*OP0100 -> ALREADY MADE. NO_OP, MOVEM
+
+* --- OP 0001 ------------------------------------------
+* FUNCTIONS     MOVE.B
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
+OP0001  
+
+
+
+
+* --- OP 0010 ------------------------------------------
+* FUNCTIONS     MOVE.L, MOVEA.L,
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
+OP0010  
+
+
+* --- OP 0011 ------------------------------------------
+* FUNCTIONS     MOVE.W, MOVEA.W
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
+OP0011
+
+
+
+* --- OP 0100 ------------------------------------------
+* FUNCTIONS     NO_OP, MOVEM, LEA, NEG, JSR, RTS
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
+OP0100  * TODO: movem, lea, nig, jsr, rts
+
+        MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
+        LEA     NOOPERATION,A1
+        MOVE.B  #14,D0          * Print a newline
+        TRAP    #15
+        MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
+        RTS
+        
+        
+        
+
+* --- OP 0101 ------------------------------------------
+* FUNCTIONS     SUBQ
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
 OP0101
+
+
+
+* --- OP 0110 ------------------------------------------
+* FUNCTIONS     BCC, BCS, BGE, BLT, BVC, BRA
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
 OP0110
+
+
+
+
+* --- OP 0111 ------------------------------------------
+* FUNCTIONS     
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
 OP0111
+
+
+
+* --- OP 1000 ------------------------------------------
+* FUNCTIONS     DIVS, OR
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
 OP1000
+
+
+
+* --- OP 1001 ------------------------------------------
+* FUNCTIONS     SUB
+* DATA REG      D0, D1 for output. D2 for entire instruction. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
 OP1001
+
+
+
+* --- OP 1010 ------------------------------------------
+* FUNCTIONS     
+* DATA REG      D0, D1 for output. D2 for entire instruction. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
 OP1010
+
+
+* --- OP 1011 ------------------------------------------
+* FUNCTIONS     EOR, CMP 
+* DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
 OP1011
-OP1100  * MULS,
-OP1101  * ADD, ADDA
+
+
+* --- OP 1100 ------------------------------------------
+* FUNCTIONS     MULS
+* DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
+OP1100
+
+
+
+* --- OP 1101 ------------------------------------------
+* FUNCTIONS     ADD, ADDA,
+* DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
+OP1101
+
+
+
+* --- OP 1110 ------------------------------------------
+* FUNCTIONS     LSL, LSR, ASL, ASR, ROL, ROR, 
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
 OP1110
+
+
+
+
+* --- OP 1111 ------------------------------------------
+* FUNCTIONS     
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
 OP1111
+
+
+
+
+
 
  * --- BITMASK ----------------------------------------------------------------
  *@pre      D6 contains the starting bit you want masked, D7 the ending bit
@@ -167,17 +319,7 @@ BITMASKDONE
  *
  * @post     all registers are returned to their previous state
 
-OP0100                          * TODO: CONSIDER ALL 0100 OPERATIONS
-        MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
-        
-        LEA     NOOPERATION,A1
-        
-        MOVE.B  #14,D0          * Print a newline
-        TRAP    #15
-        
-        MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
-        
-        RTS
+
 
  * ----------------------------------------------------------------------------
  * ----------------------------------------------------------------------------
@@ -236,6 +378,7 @@ __D7        DC.B   'D7'
 
 END
     END    START        ; last line of source
+
 
 
 

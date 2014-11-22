@@ -1,6 +1,6 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.15.02
-Created On: 11/20/2014 8:18:02 PM
+Created On: 11/22/2014 3:26:52 PM
 
 00000000                             1  *    666
 00000000                             2  *   66 66
@@ -83,8 +83,8 @@ Created On: 11/20/2014 8:18:02 PM
 00001020                            79  * GETS THE ENDING ADDRESS
 00001020  103C 0004                 80          MOVE.B  #4,D0           * Trap #4 gets an input and stores in D1
 00001024  4E4F                      81          TRAP    #15             * Perform Trap #4
-00001026  2A01                      82          MOVE.L  D1,D5           * Move the ending address into D5. This is the ending address.
-00001028  43F9 000010C2             83          LEA     NEWLINE,A1      * Store newline variable for seperating operations
+00001026  2A01                      82          MOVE.L  D1,D5           * Move the ending address into D5
+00001028  43F9 000010C2             83          LEA     NEWLINE,A1      * Store newline variable for seper opcodes
 0000102E                            84          
 0000102E  3E3C 000F                 85          MOVE.W  #15,D7          * prep D7 for bitmask subroutine
 00001032  3C3C 000C                 86          MOVE.W  #12,D6          * prep D6 for bitmask subroutine
@@ -108,7 +108,7 @@ Created On: 11/20/2014 8:18:02 PM
 00001056  4E4F                     104          TRAP    #15             * Perform Trap #3
 00001058                           105          
 00001058                           106  ITERATION
-00001058  341F                     107          MOVE    (A7)+,D2        * restore the bitmask
+00001058  341F                     107          MOVE    (A7)+,D2        * restore the bitmask to its previous state
 0000105A                           108  
 0000105A  103C 000E                109          MOVE.B  #14,D0          * Print a newline
 0000105E  4E4F                     110          TRAP    #15             * Perform Trap #14
@@ -117,129 +117,141 @@ Created On: 11/20/2014 8:18:02 PM
 00001062  6700 2FAA                113          BEQ     END             * If they are equal, branch 
 00001066  60D4                     114          BRA     LOOP            * Otherwise, branch back to LOOP
 00001068                           115  
-00001068                           116  OP0000  * BCLR, ORI, CMPI
-00001068                           117          * Compare 8th bit
-00001068                           118          * If 8th bit is 1, go to BCLR
-00001068                           119              * If bit 7 = 1 and 6 = 0, it is confirmed BCLR
-00001068                           120                  * Check if mode and both registers is right
-00001068                           121          * Now compare bits 9,10,11
-00001068                           122              * If they're 000, go to ORI
-00001068                           123                  * Check if size, mode, and register is right
-00001068                           124              * If they're 110, go to CMPI
-00001068                           125                  * Check if size, mode, and register is right
-00001068                           126  
-00001068                           127  OP0001  * MOVE_BYTE,
-00001068                           128  OP0010  * MOVE_LONG, MOVEA_LONG
-00001068                           129  OP0011  * MOVE_WORD, MOVEA_WORD
-00001068                           130  *OP0100 -> ALREADY MADE. NO_OP, MOVEM
-00001068                           131  OP0101
-00001068                           132  OP0110
-00001068                           133  OP0111
-00001068                           134  OP1000
-00001068                           135  OP1001
-00001068                           136  OP1010
-00001068                           137  OP1011
-00001068                           138  OP1100  * MULS,
-00001068                           139  OP1101  * ADD, ADDA
-00001068                           140  OP1110
-00001068                           141  OP1111
-00001068                           142  
-00001068                           143   * --- BITMASK ----------------------------------------------------------------
-00001068                           144   *@pre      D6 contains the starting bit you want masked, D7 the ending bit
-00001068                           145   *
-00001068                           146   *@post     D6 contains the bitmask, ready for use
-00001068                           147   
-00001068                           148  BITMASK
-00001068  3F05                     149          MOVE    D5,-(A7)    * push D5 onto the stack so we can use it to
-0000106A  4245                     150          CLR     D5          * clear D5 so we can use it
-0000106C                           151  LOOPBIT 
-0000106C  0DC5                     152          BSET    D6,D5       * set the D6th bit in D5 to 1
-0000106E  5246                     153          ADD     #1,D6       * increment D6
-00001070                           154          
-00001070  BC47                     155          CMP     D7,D6       * have we finished?
-00001072  6E00 0004                156          BGT     BITMASKDONE * yes
-00001076  60F4                     157          BRA     LOOPBIT     * no, iterate again
-00001078                           158          
-00001078                           159  BITMASKDONE
-00001078                           160  
-00001078  2C05                     161          MOVE.L  D5,D6
-0000107A  3A1F                     162          MOVE    (A7)+,D5    * restore D5
-0000107C  4E75                     163          RTS
-0000107E                           164          
-0000107E                           165   * --- OP0100 -----------------------------------------------------------------
-0000107E                           166   * @pre      D2 contains the opcode
-0000107E                           167   *
-0000107E                           168   * @post     all registers are returned to their previous state
-0000107E                           169  
-0000107E                           170  OP0100                          * TODO: CONSIDER ALL 0100 OPERATIONS
-0000107E  48A7 C0C0                171          MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
-00001082                           172          
-00001082  43F9 000010C5            173          LEA     NOOPERATION,A1
-00001088                           174          
-00001088  103C 000E                175          MOVE.B  #14,D0          * Print a newline
-0000108C  4E4F                     176          TRAP    #15
-0000108E                           177          
-0000108E  4C9F 0303                178          MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
-00001092                           179          
-00001092  4E75                     180          RTS
-00001094                           181  
-00001094                           182   * ----------------------------------------------------------------------------
-00001094                           183   * ----------------------------------------------------------------------------
-00001094                           184   * Constants for printing information to the console
-00001094                           185  
-00001094  =0000000D                186  CR      EQU     $0D
-00001094  =0000000A                187  LF      EQU     $0A
-00001094= 45 4E 54 45 52 20 ...    188  MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
-000010AC= 45 4E 54 45 52 20 ...    189  MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
-000010C2= 0D 0A 00                 190  NEWLINE     DC.B    CR,LF,0
-000010C5= 4E 4F 50 00              191  NOOPERATION DC.B    'NOP',0
-000010C9                           192  
-000010C9                           193   * ----------------------------------------------------------------------------
-000010C9                           194   * ----------------------------------------------------------------------------
-000010C9                           195   * Data defined constants
-000010C9                           196   *   - B/W/L (representing Byte, Word, Long)
-000010C9                           197   *   - A0-A7 (representing the 8 address registers)
-000010C9                           198   *   - D0-D7 (representing the 8 data registers)
-000010C9                           199   * ----------------------------------------------------------------------------
-000010C9                           200  
-000010C9= 42                       201  __B        DC.B    'B'
-000010CA= 57                       202  __W        DC.B    'W'
-000010CB= 4C                       203  __L        DC.B    'L'
-000010CC                           204  
-000010CC= 41 30                    205  __A0        DC.B   'A0'
-000010CE= 41 31                    206  __A1        DC.B   'A1'    
-000010D0= 41 32                    207  __A2        DC.B   'A2'
-000010D2= 41 33                    208  __A3        DC.B   'A3'
-000010D4= 41 34                    209  __A4        DC.B   'A4'
-000010D6= 41 35                    210  __A5        DC.B   'A5'
-000010D8= 41 36                    211  __A6        DC.B   'A6'
-000010DA= 41 37                    212  __A7        DC.B   'A7'
-000010DC                           213  
-000010DC= 44 30                    214  __D0        DC.B   'D0'
-000010DE= 44 31                    215  __D1        DC.B   'D1'
-000010E0= 44 32                    216  __D2        DC.B   'D2'
-000010E2= 44 33                    217  __D3        DC.B   'D3'
-000010E4= 44 34                    218  __D4        DC.B   'D4'
-000010E6= 44 35                    219  __D5        DC.B   'D5'
-000010E8= 44 36                    220  __D6        DC.B   'D6'
-000010EA= 44 37                    221  __D7        DC.B   'D7'
-000010EC                           222   * ---------------------------------------------------------------------------
-000010EC                           223   * End of definition segment
-000010EC                           224   * ---------------------------------------------------------------------------
-000010EC                           225   * ---------------------------------------------------------------------------
-000010EC                           226  
-000010EC                           227  * Put variables and constants here
-000010EC                           228  
-00004000                           229      ORG $4000
-00004000                           230  
-00004000  4E71                     231      NOP
-00004002  103C 009A                232      MOVE.B   #%10011010, D0
-00004006  123C 00A9                233      MOVE.B   #%10101001, D1
-0000400A  D200                     234      ADD.B    D0,D1
-0000400C  4E71                     235      NOP
-0000400E                           236  
-0000400E                           237  END
-0000400E                           238      END    START        ; last line of source
+00001068                           116  * --- OP 0000 ------------------------------------------
+00001068                           117  * FUNCTIONS     BCLR, ORI, CMPI
+00001068                           118  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask. 
+00001068                           119  * ADDR REG        
+00001068                           120  * POST COND     All registers return to their previous state.
+00001068                           121  * ------------------------------------------------------
+00001068                           122  OP0000  * BCLR, ORI, CMPI
+00001068                           123          * Compare 8th bit
+00001068                           124          * If 8th bit is 1, go to BCLR
+00001068                           125              * If bit 7 = 1 and 6 = 0, it is confirmed BCLR
+00001068                           126                  * Check if mode and both registers is right
+00001068                           127          * Now compare bits 9,10,11
+00001068                           128              * If they're 000, go to ORI
+00001068                           129                  * Check if size, mode, and register is right
+00001068                           130              * If they're 110, go to CMPI
+00001068                           131                  * Check if size, mode, and register is right
+00001068                           132  
+00001068                           133  * --- OP 0001 ------------------------------------------
+00001068                           134  * FUNCTIONS     MOVE.B
+00001068                           135  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+00001068                           136  * ADDR REG        
+00001068                           137  * POST COND     All registers return to their previous state.
+00001068                           138  * ------------------------------------------------------
+00001068                           139  OP0001  * MOVE_BYTE,
+00001068                           140  OP0010  * MOVE_LONG, MOVEA_LONG
+00001068                           141  OP0011  * MOVE_WORD, MOVEA_WORD
+00001068                           142  *OP0100 -> ALREADY MADE. NO_OP, MOVEM
+00001068                           143  OP0101
+00001068                           144  OP0110
+00001068                           145  OP0111
+00001068                           146  OP1000
+00001068                           147  OP1001
+00001068                           148  OP1010
+00001068                           149  OP1011
+00001068                           150  OP1100  * MULS,
+00001068                           151  OP1101  * ADD, ADDA
+00001068                           152  OP1110
+00001068                           153  OP1111
+00001068                           154  
+00001068                           155   * --- BITMASK ----------------------------------------------------------------
+00001068                           156   *@pre      D6 contains the starting bit you want masked, D7 the ending bit
+00001068                           157   *
+00001068                           158   *@post     D6 contains the bitmask, ready for use
+00001068                           159   
+00001068                           160  BITMASK
+00001068  3F05                     161          MOVE    D5,-(A7)    * push D5 onto the stack so we can use it to
+0000106A  4245                     162          CLR     D5          * clear D5 so we can use it
+0000106C                           163  LOOPBIT 
+0000106C  0DC5                     164          BSET    D6,D5       * set the D6th bit in D5 to 1
+0000106E  5246                     165          ADD     #1,D6       * increment D6
+00001070                           166          
+00001070  BC47                     167          CMP     D7,D6       * have we finished?
+00001072  6E00 0004                168          BGT     BITMASKDONE * yes
+00001076  60F4                     169          BRA     LOOPBIT     * no, iterate again
+00001078                           170          
+00001078                           171  BITMASKDONE
+00001078                           172  
+00001078  2C05                     173          MOVE.L  D5,D6
+0000107A  3A1F                     174          MOVE    (A7)+,D5    * restore D5
+0000107C  4E75                     175          RTS
+0000107E                           176          
+0000107E                           177   * --- OP0100 -----------------------------------------------------------------
+0000107E                           178   * @pre      D2 contains the opcode
+0000107E                           179   *
+0000107E                           180   * @post     all registers are returned to their previous state
+0000107E                           181  
+0000107E                           182  OP0100                          * TODO: CONSIDER ALL 0100 OPERATIONS
+0000107E  48A7 C0C0                183          MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
+00001082                           184          
+00001082  43F9 000010C5            185          LEA     NOOPERATION,A1
+00001088                           186          
+00001088  103C 000E                187          MOVE.B  #14,D0          * Print a newline
+0000108C  4E4F                     188          TRAP    #15
+0000108E                           189          
+0000108E  4C9F 0303                190          MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
+00001092                           191          
+00001092  4E75                     192          RTS
+00001094                           193  
+00001094                           194   * ----------------------------------------------------------------------------
+00001094                           195   * ----------------------------------------------------------------------------
+00001094                           196   * Constants for printing information to the console
+00001094                           197  
+00001094  =0000000D                198  CR      EQU     $0D
+00001094  =0000000A                199  LF      EQU     $0A
+00001094= 45 4E 54 45 52 20 ...    200  MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
+000010AC= 45 4E 54 45 52 20 ...    201  MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
+000010C2= 0D 0A 00                 202  NEWLINE     DC.B    CR,LF,0
+000010C5= 4E 4F 50 00              203  NOOPERATION DC.B    'NOP',0
+000010C9                           204  
+000010C9                           205   * ----------------------------------------------------------------------------
+000010C9                           206   * ----------------------------------------------------------------------------
+000010C9                           207   * Data defined constants
+000010C9                           208   *   - B/W/L (representing Byte, Word, Long)
+000010C9                           209   *   - A0-A7 (representing the 8 address registers)
+000010C9                           210   *   - D0-D7 (representing the 8 data registers)
+000010C9                           211   * ----------------------------------------------------------------------------
+000010C9                           212  
+000010C9= 42                       213  __B        DC.B    'B'
+000010CA= 57                       214  __W        DC.B    'W'
+000010CB= 4C                       215  __L        DC.B    'L'
+000010CC                           216  
+000010CC= 41 30                    217  __A0        DC.B   'A0'
+000010CE= 41 31                    218  __A1        DC.B   'A1'    
+000010D0= 41 32                    219  __A2        DC.B   'A2'
+000010D2= 41 33                    220  __A3        DC.B   'A3'
+000010D4= 41 34                    221  __A4        DC.B   'A4'
+000010D6= 41 35                    222  __A5        DC.B   'A5'
+000010D8= 41 36                    223  __A6        DC.B   'A6'
+000010DA= 41 37                    224  __A7        DC.B   'A7'
+000010DC                           225  
+000010DC= 44 30                    226  __D0        DC.B   'D0'
+000010DE= 44 31                    227  __D1        DC.B   'D1'
+000010E0= 44 32                    228  __D2        DC.B   'D2'
+000010E2= 44 33                    229  __D3        DC.B   'D3'
+000010E4= 44 34                    230  __D4        DC.B   'D4'
+000010E6= 44 35                    231  __D5        DC.B   'D5'
+000010E8= 44 36                    232  __D6        DC.B   'D6'
+000010EA= 44 37                    233  __D7        DC.B   'D7'
+000010EC                           234   * ---------------------------------------------------------------------------
+000010EC                           235   * End of definition segment
+000010EC                           236   * ---------------------------------------------------------------------------
+000010EC                           237   * ---------------------------------------------------------------------------
+000010EC                           238  
+000010EC                           239  * Put variables and constants here
+000010EC                           240  
+00004000                           241      ORG $4000
+00004000                           242  
+00004000  4E71                     243      NOP
+00004002  103C 009A                244      MOVE.B   #%10011010, D0
+00004006  123C 00A9                245      MOVE.B   #%10101001, D1
+0000400A  D200                     246      ADD.B    D0,D1
+0000400C  4E71                     247      NOP
+0000400E                           248  
+0000400E                           249  END
+0000400E                           250      END    START        ; last line of source
 
 No errors detected
 No warnings generated
