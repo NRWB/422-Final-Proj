@@ -100,11 +100,13 @@ LOOP
         BRA     ITERATION       * Move to next iteration of the loop
         
 NEXT16
+        MOVE.W  D2,D1           * Print opcode we don't recognize
+
         MOVE.B  #3,D0           * Print out operation we don't recognize
         TRAP    #15             * Perform Trap #3
         
 ITERATION
-        MOVE    (A7)+,D2        * restore the bitmask to its previous state
+        MOVE    (A7)+,D6        * restore the bitmask to its previous state
 
         MOVE.B  #14,D0          * Print a newline
         TRAP    #15             * Perform Trap #14
@@ -167,7 +169,7 @@ OP0011
     
     AND.W   D2,D6
     
-    CMP     D6,#%0000000001000000
+    CMP     #%0000000001000000,D6
     BNE     NEXT15
     BSR     * for MOVEA.W
     
@@ -184,9 +186,52 @@ OP0100  * TODO: movem, lea, neg, jsr, rts
 
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
         
+        * prep values for BITMASK subroutine
+        MOVE.W  #8,D6
+        MOVE.W  #11,D7
+        
+        BSR     BITMASK
+        
+        AND     D2,D6                   * apply bitmask
+        
+        CMPI    #%0000010000000000,D6   * are we NEG?
+        BNE     NEXT19                  * not neg
+      
+        * it is NEG, print
+        LEA     NEGOP,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BRA     NEXT17 * we found the op, move to next iteration
+        
+NEXT19 * is it MOVEM?
+
+        * prep values for BITMASK subroutine
+        MOVE.W  #7,D6
+        MOVE.W  #9,D7
+        
+        BSR     BITMASK
+        
+        AND     D2,D6   * apply bitmask
+        
+        CMPI    #%0000000010000000,D6 * is it MOVEM?
+        BNE     NEXT18          * it is not MOVEM
+        
+        * it is MOVEM
+        LEA     MOVEMOP,A1
+        MOVE.B  #14,D0          * Print a newline
+        TRAP    #15
+        
+        MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+        
+        BRA     NEXT17
+NEXT18
+        
         LEA     NOOPERATION,A1
         MOVE.B  #14,D0          * Print a newline
         TRAP    #15
+        
+NEXT17
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
         RTS
         
@@ -345,6 +390,8 @@ MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
 MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
 NOOPERATION DC.B    'NOP',0
+NEGOP       DC.B    'NEG',0
+MOVEMOP     DC.B    'MOVEM',0
 
  * ----------------------------------------------------------------------------
  * ----------------------------------------------------------------------------
@@ -388,10 +435,12 @@ __D7        DC.B   'D7'
     MOVE.B   #%10011010, D0
     MOVE.B   #%10101001, D1
     ADD.B    D0,D1
-    NOP
+    MOVEM    D1,-(A7)
+    NEG.W    D3
 
 END
     END    START        ; last line of source
+
 
 
 
