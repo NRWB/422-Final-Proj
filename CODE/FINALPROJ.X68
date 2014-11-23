@@ -85,16 +85,16 @@ START:  ORG    $1000            * first instruction of program
         MOVE.W  #15,D7          * prep D7 for bitmask subroutine
         MOVE.W  #12,D6          * prep D6 for bitmask subroutine
         BSR     BITMASK         * obtain a bitmask that goes from 12-15 (inclusive)
-        MOVE.W  D6,D2           * move the bitmask to D2
+        * MOVE.W  D6,D2           * move the bitmask to D2
         
 LOOP    
         
         * MOVE.W  #BITMASK,D2     * Load the bitmask into data register D2
-        MOVE    D2,-(A7)        * save the bitmask
-        MOVE.W  (A2)+,D1        * Read an operation into D1
-        AND.W   D1,D2           * Apply this bitmask
+        MOVE    D6,-(A7)        * save the bitmask
+        MOVE.W  (A2)+,D2        * Read an operation into D1
+        AND.W   D2,D6           * Apply this bitmask
         
-        CMP     #OP_0100,D2     * Does the operation start with 0100?
+        CMP     #OP_0100,D6     * Does the operation start with 0100?
         BNE     NEXT16          * No, check next case
         BSR     OP0100          * Branch to subroutine 0100
         BRA     ITERATION       * Move to next iteration of the loop
@@ -158,7 +158,20 @@ OP0010
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
 OP0011
-
+    MOVEM   D0-D7/A0-A6, -(A7)
+    
+    MOVE.W  #6,D6
+    MOVE.W  #8,D7
+    
+    BSR     BITMASK
+    
+    AND.W   D2,D6
+    
+    CMP     D6,#%0000000001000000
+    BNE     NEXT15
+    BSR     * for MOVEA.W
+    
+NEXT15
 
 
 * --- OP 0100 ------------------------------------------
@@ -167,9 +180,10 @@ OP0011
 * ADDR REG        
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
-OP0100  * TODO: movem, lea, nig, jsr, rts
+OP0100  * TODO: movem, lea, neg, jsr, rts
 
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
+        
         LEA     NOOPERATION,A1
         MOVE.B  #14,D0          * Print a newline
         TRAP    #15
@@ -378,6 +392,7 @@ __D7        DC.B   'D7'
 
 END
     END    START        ; last line of source
+
 
 
 
