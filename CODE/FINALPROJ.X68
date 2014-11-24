@@ -136,7 +136,7 @@ OP0000
         TRAP    #15                 * Perform Trap #14
         BRA     NEXT17              * Found the op, move to next iteration
 
-NOTBCLR
+NOTBCLR * Possible options left are ORI or CMPI
         MOVE.W  #9, D6              * Prep lower value for bitmask
         MOVE.W  #11, D7             * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
@@ -255,10 +255,22 @@ CMPIEA
         CMPI    #%0000000000111000, D6  * Is the Mode 111?
         BEQ     CMPIREG                 * Further investigation is needed
         
-        * Mode is valid at this point
+        * Mode is verified to be valid at this point
         CMPI    #%0000000000000000, D6  * AMode = Dn, Reg = Dn
-        BEQ     MODEDN
-
+        BSR     MODE_DN
+        
+        CMPI    #%0000000000010000, D6  * AMode = (An), Reg = An
+        BSR     MODE_IAN
+        
+        CMPI    #%0000000000011000, D6  * AMode = (An)+, Reg = An
+        BSR     MODE_IAN_POS
+        
+        CMPI    #%0000000000000000, D6  * AMode = -(An), Reg = An
+        BSR     MODE_IAN_PRE
+        
+        * Reached End of CMPI. Everything has been printed out
+        MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
+        RTS
         
 CMPIREG
         MOVE.W  #0, D6              * Prep lower value for bitmask
@@ -277,16 +289,94 @@ CMPIREG000  * TODO (xxx).W for CMPI
 
 CMPIREG001  * TODO (xxx).L for CMPI
         
-        
+* --- Effective Address --------------------------------
+* PURPOSE       To generalize the EA part of the project.
+* PRE CON       The Mode must have been correctly identified. All Modes must be called by RTS
+* POST CON      After the EA, the entire op will head back to the BSR that called it.
+* ------------------------------------------------------        
 MODE_DN
+        MOVE.W  #0, D6              * Prep lower value for bitmask
+        MOVE.W  #2, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%000000000000000, D6   * Data Register D0?
+        BSR     PRINTD0
+        CMPI    #%000000000000001, D6   * Data Register D1?
+        BSR     PRINTD1
+        CMPI    #%000000000000010, D6   * Data Register D2?
+        BSR     PRINTD2
+        CMPI    #%000000000000011, D6   * Data Register D3?
+        BSR     PRINTD3
+        CMPI    #%000000000000100, D6   * Data Register D4?
+        BSR     PRINTD4
+        CMPI    #%000000000000101, D6   * Data Register D5?
+        BSR     PRINTD5
+        CMPI    #%000000000000110, D6   * Data Register D6?
+        BSR     PRINTD6
+        CMPI    #%000000000000111, D6   * Data Register D7?
+        BSR     PRINTD7
+        
+        RTS     * Return to function to handle pointer advancing, RTS to main, etc.
+
+PRINTD0
+        LEA     __D0, A1        * Load 'D0'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
+PRINTD1
+        LEA     __D1, A1        * Load 'D1'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
+PRINTD2
+        LEA     __D2, A1        * Load 'D2'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
+PRINTD3
+        LEA     __D3, A1        * Load 'D3'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
+PRINTD4
+        LEA     __D4, A1        * Load 'D4'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
+PRINTD5
+        LEA     __D5, A1        * Load 'D5'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
+PRINTD6
+        LEA     __D6, A1        * Load 'D6'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
+PRINTD7
+        LEA     __D7, A1        * Load 'D7'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
 MODE_AN
+
 MODE_IAN
 MODE_IAN_POS
 MODE_IAN_PRE
 
+
+
    
 UNKNOWNOP
-        
 
 
 
@@ -601,6 +691,7 @@ __D7        DC.B   'D7'
 
 END
     END    START        ; last line of source
+
 
 
 
