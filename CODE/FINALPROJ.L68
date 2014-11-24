@@ -1,6 +1,6 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.15.02
-Created On: 11/24/2014 10:28:35 AM
+Created On: 11/24/2014 2:19:05 PM
 
 00000000                             1  *    666
 00000000                             2  *   66 66
@@ -64,7 +64,7 @@ Created On: 11/24/2014 10:28:35 AM
 00001000                            60  * THINK ABOUT ASKING FOR VALID START/END NO NEGATIVE ADDR
 00001000                            61  
 00001000                            62  * LOAD MSGSTART, ASK FOR INPUT
-00001000  43F9 00001342             63          LEA     MSGSTART,A1     * Load MESSAGE START
+00001000  43F9 000013E2             63          LEA     MSGSTART,A1     * Load MESSAGE START
 00001006  103C 000E                 64          MOVE.B  #14,D0          * Trap #14 to display message
 0000100A  4E4F                      65          TRAP    #15             * Perform #14
 0000100C                            66          
@@ -76,7 +76,7 @@ Created On: 11/24/2014 10:28:35 AM
 00001012  2441                      72          MOVEA.L D1,A2           * Move the user input into A2. This is the starting address.
 00001014                            73  
 00001014                            74  * LOAD MSGSTART, ASK FOR INPUT
-00001014  43F9 0000135A             75          LEA     MSGEND,A1       * Load MESSAGE END
+00001014  43F9 000013FA             75          LEA     MSGEND,A1       * Load MESSAGE END
 0000101A  303C 000E                 76          MOVE.W  #14,D0          * Trap #14 to display message
 0000101E  4E4F                      77          TRAP    #15             * Perform #14
 00001020                            78          
@@ -84,11 +84,11 @@ Created On: 11/24/2014 10:28:35 AM
 00001020  103C 0004                 80          MOVE.B  #4,D0           * Trap #4 gets an input and stores in D1
 00001024  4E4F                      81          TRAP    #15             * Perform Trap #4
 00001026  2A01                      82          MOVE.L  D1,D5           * Move the ending address into D5
-00001028  43F9 00001370             83          LEA     NEWLINE,A1      * Store newline variable for seper opcodes
+00001028  43F9 00001410             83          LEA     NEWLINE,A1      * Store newline variable for seper opcodes
 0000102E                            84          
 0000102E  3E3C 000F                 85          MOVE.W  #15,D7          * prep D7 for bitmask subroutine
 00001032  3C3C 000C                 86          MOVE.W  #12,D6          * prep D6 for bitmask subroutine
-00001036  6100 02F4                 87          BSR     BITMASK         * obtain a bitmask that goes from 12-15 (inclusive)
+00001036  6100 0394                 87          BSR     BITMASK         * obtain a bitmask that goes from 12-15 (inclusive)
 0000103A                            88          * MOVE.W  D6,D2           * move the bitmask to D2
 0000103A                            89          
 0000103A                            90  LOOP    
@@ -99,11 +99,11 @@ Created On: 11/24/2014 10:28:35 AM
 0000103E  CC42                      95          AND.W   D2,D6           * Apply this bitmask
 00001040                            96          
 00001040  BC7C 4000                 97          CMP     #OP_0100,D6     * Does the operation start with 0100?
-00001044  6600 000A                 98          BNE     NEXT16          * No, check next case
+00001044  6600 000A                 98          BNE     NEXT            * No, check next case
 00001048  6100 027E                 99          BSR     OP0100          * Branch to subroutine 0100
 0000104C  6000 000A                100          BRA     ITERATION       * Move to next iteration of the loop
 00001050                           101          
-00001050                           102  NEXT16
+00001050                           102  NEXT
 00001050  3202                     103          MOVE.W  D2,D1           * Print opcode we don't recognize
 00001052                           104  
 00001052  103C 0003                105          MOVE.B  #3,D0           * Print out operation we don't recognize
@@ -116,7 +116,7 @@ Created On: 11/24/2014 10:28:35 AM
 0000105E  4E4F                     112          TRAP    #15             * Perform Trap #14
 00001060                           113  
 00001060  BA4A                     114          CMP     A2,D5           * Compare the starting address to ending address
-00001062  6700 2FAE                115          BEQ     END             * If they are equal, branch 
+00001062  6700 2FB8                115          BEQ     END             * If they are equal, branch 
 00001066  60D2                     116          BRA     LOOP            * Otherwise, branch back to LOOP
 00001068                           117  
 00001068                           118  * --- OP 0000 ------------------------------------------
@@ -126,24 +126,24 @@ Created On: 11/24/2014 10:28:35 AM
 00001068                           122  * POST COND     All registers return to their previous state.
 00001068                           123  * ------------------------------------------------------
 00001068                           124  OP0000
-00001068  48A7 C0C0                125          MOVEM   D0-D1/A0-A1,-(A7)   * Push values to the stack to save
+00001068  48A7 C0C0                125   MOVEM   D0-D1/A0-A1,-(A7)   * Push values to the stack to save
 0000106C  3C3C 0006                126          MOVE.W  #6, D6              * Prep lower value for bitmask
 00001070  3E3C 0008                127          MOVE.W  #8, D7              * Prep upper value for bitmask
-00001074  6100 02B6                128          BSR     BITMASK             * Finalize bitmask setup
+00001074  6100 0356                128          BSR     BITMASK             * Finalize bitmask setup
 00001078  CC42                     129          AND     D2,D6               * Apply bitmask
 0000107A                           130          
 0000107A  0C46 0180                131          CMPI    #%0000000110000000, D6  * Are we BCLR?
 0000107E  6600 0012                132          BNE     NOTBCLR                 * If not, branch to other OP0000 functions
 00001082                           133          
-00001082  43F9 00001377            134          LEA     BCLROP,A1           * We found BCLR
+00001082  43F9 0000142D            134          LEA     BCLROP,A1           * We found BCLR
 00001088  103C 000E                135          MOVE.B  #14,D0              * Trap #14 prints out the data
 0000108C  4E4F                     136          TRAP    #15                 * Perform Trap #14
-0000108E  6000 0296                137          BRA     NEXT17              * Found the op, move to next iteration
+0000108E  6000 02D8                137          BRA     NEXT17              * Found the op, move to next iteration
 00001092                           138  
 00001092                           139  NOTBCLR * Possible options left are ORI or CMPI
 00001092  3C3C 0009                140          MOVE.W  #9, D6              * Prep lower value for bitmask
 00001096  3E3C 000B                141          MOVE.W  #11, D7             * Prep upper value for bitmask
-0000109A  6100 0290                142          BSR     BITMASK             * Finalize bitmask setup
+0000109A  6100 0330                142          BSR     BITMASK             * Finalize bitmask setup
 0000109E  CC42                     143          AND     D2,D6               * Apply bitmask
 000010A0                           144          
 000010A0  0C46 0000                145          CMPI    #%0000000000000000, D6  * Are we ORI?
@@ -159,14 +159,14 @@ Created On: 11/24/2014 10:28:35 AM
 000010B4                           155          
 000010B4                           156  
 000010B4                           157  ISCMPI
-000010B4  43F9 00001384            158          LEA     CMPIOP, A1          * Load 'CMPI' into the output window
+000010B4  43F9 00001436            158          LEA     CMPIOP, A1          * Load 'CMPI' into the output window
 000010BA  103C 000E                159          MOVE.B  #14,D0              * Trap #14 prints out the data in D0
 000010BE  4E4F                     160          TRAP    #15                 * Perform Trap #14
 000010C0                           161          
 000010C0                           162          * Determine the Size
 000010C0  3C3C 0006                163          MOVE.W  #6, D6              * Prep lower value for bitmask
 000010C4  3E3C 0007                164          MOVE.W  #7, D7              * Prep upper value for bitmask
-000010C8  6100 0262                165          BSR     BITMASK             * Finalize bitmask setup
+000010C8  6100 0302                165          BSR     BITMASK             * Finalize bitmask setup
 000010CC  CC42                     166          AND     D2,D6               * Apply bitmask
 000010CE                           167          
 000010CE  0C46 00C0                168          CMPI    #%0000000011000000, D6  * Imposter Op
@@ -182,11 +182,11 @@ Created On: 11/24/2014 10:28:35 AM
 000010EA  6700 0050                178          BEQ     CMPILONG                * Branch to CMPI.L
 000010EE                           179          
 000010EE                           180  CMPIBYTE
-000010EE  43F9 00001391            181          LEA     __B, A1     * Load .B
+000010EE  43F9 0000143D            181          LEA     __B, A1     * Load .B
 000010F4  103C 000E                182          MOVE.B  #14, D0     * Print out data
 000010F8  4E4F                     183          TRAP    #15         * Perform Trap #14
 000010FA                           184          
-000010FA  43F9 0000138F            185          LEA     IMD, A1     * Load #
+000010FA  43F9 0000143B            185          LEA     IMD, A1     * Load #
 00001100  103C 000E                186          MOVE.B  #14, D0     * Print out data
 00001104  4E4F                     187          TRAP    #15         * Perform Trap #14
 00001106                           188          
@@ -199,11 +199,11 @@ Created On: 11/24/2014 10:28:35 AM
 00001112  6000 004E                195          BRA     CMPIEA      * Branch to determine Effective Address
 00001116                           196          
 00001116                           197  CMPIWORD
-00001116  43F9 00001393            198          LEA     __W, A1     * Load .W
+00001116  43F9 0000143F            198          LEA     __W, A1     * Load .W
 0000111C  103C 000E                199          MOVE.B  #14, D0     * Print out data
 00001120  4E4F                     200          TRAP    #15         * Perform Trap #14
 00001122                           201          
-00001122  43F9 0000138F            202          LEA     IMD, A1     * Load #
+00001122  43F9 0000143B            202          LEA     IMD, A1     * Load #
 00001128  103C 000E                203          MOVE.B  #14, D0     * Print out data
 0000112C  4E4F                     204          TRAP    #15         * Perform Trap #14
 0000112E                           205          
@@ -216,11 +216,11 @@ Created On: 11/24/2014 10:28:35 AM
 00001138  6000 0028                212          BRA     CMPIEA      * Branch to determine Effective Address
 0000113C                           213          
 0000113C                           214  CMPILONG
-0000113C  43F9 00001395            215          LEA     __L, A1     * Load .L
+0000113C  43F9 00001441            215          LEA     __L, A1     * Load .L
 00001142  103C 000E                216          MOVE.B  #14, D0     * Print out data
 00001146  4E4F                     217          TRAP    #15         * Perform Trap #14
 00001148                           218          
-00001148  43F9 0000138F            219          LEA     IMD, A1     * Load #
+00001148  43F9 0000143B            219          LEA     IMD, A1     * Load #
 0000114E  103C 000E                220          MOVE.B  #14, D0     * Print out data
 00001152  4E4F                     221          TRAP    #15         * Perform Trap #14
 00001154                           222          
@@ -233,18 +233,18 @@ Created On: 11/24/2014 10:28:35 AM
 00001162                           229          
 00001162                           230  CMPIEA
 00001162                           231          * So far the buffer is CMPI.X #Y ... Now we need to add a comma
-00001162  43F9 00001390            232          LEA     COMMA, A1   * Load ,
+00001162  43F9 0000143C            232          LEA     COMMA, A1   * Load ,
 00001168  103C 000E                233          MOVE.B  #14, D0     * Print out data
 0000116C  4E4F                     234          TRAP    #15         * Perform Trap #14
 0000116E                           235          
-0000116E  43F9 00001395            236          LEA     __L, A1     * Load .L
+0000116E  43F9 00001441            236          LEA     __L, A1     * Load .L
 00001174  103C 000E                237          MOVE.B  #14, D0     * Print out data
 00001178  4E4F                     238          TRAP    #15         * Perform Trap #14
 0000117A                           239          
 0000117A                           240          * Determine the mode
 0000117A  3C3C 0003                241          MOVE.W  #3, D6              * Prep lower value for bitmask
 0000117E  3E3C 0005                242          MOVE.W  #5, D7              * Prep upper value for bitmask
-00001182  6100 01A8                243          BSR     BITMASK             * Finalize bitmask setup
+00001182  6100 0248                243          BSR     BITMASK             * Finalize bitmask setup
 00001186  CC42                     244          AND     D2,D6               * Apply bitmask
 00001188                           245          
 00001188  0C46 0008                246          CMPI    #%0000000000001000, D6  * Is the Mode 001, an unsupported mode for CMPI?
@@ -279,7 +279,7 @@ Created On: 11/24/2014 10:28:35 AM
 000011CE                           275  CMPIREG
 000011CE  3C3C 0000                276          MOVE.W  #0, D6              * Prep lower value for bitmask
 000011D2  3E3C 0002                277          MOVE.W  #2, D7              * Prep upper value for bitmask
-000011D6  6100 0154                278          BSR     BITMASK             * Finalize bitmask setup
+000011D6  6100 01F4                278          BSR     BITMASK             * Finalize bitmask setup
 000011DA  CC42                     279          AND     D2,D6               * Apply bitmask
 000011DC                           280          
 000011DC  0C46 0000                281          CMPI    #%0000000000000000, D6  * Is the Register 000?
@@ -301,7 +301,7 @@ Created On: 11/24/2014 10:28:35 AM
 000011EC                           297  MODE_DN
 000011EC  3C3C 0000                298          MOVE.W  #0, D6              * Prep lower value for bitmask
 000011F0  3E3C 0002                299          MOVE.W  #2, D7              * Prep upper value for bitmask
-000011F4  6100 0136                300          BSR     BITMASK             * Finalize bitmask setup
+000011F4  6100 01D6                300          BSR     BITMASK             * Finalize bitmask setup
 000011F8  CC42                     301          AND     D2,D6               * Apply bitmask
 000011FA                           302          
 000011FA  0C46 0000                303          CMPI    #%000000000000000, D6   * Data Register D0?
@@ -324,49 +324,49 @@ Created On: 11/24/2014 10:28:35 AM
 0000123A  4E75                     320          RTS     * Return to function to handle pointer advancing, RTS to main, etc.
 0000123C                           321  
 0000123C                           322  PRINTD0
-0000123C  43F9 000013A7            323          LEA     __D0, A1        * Load 'D0'
+0000123C  43F9 00001453            323          LEA     __D0, A1        * Load 'D0'
 00001242  103C 000E                324          MOVE.B  #14, D0         * Load Trap #14 to print out
 00001246  4E4F                     325          TRAP    #15             * Perform Trap #14
 00001248  4E75                     326          RTS
 0000124A                           327          
 0000124A                           328  PRINTD1
-0000124A  43F9 000013A9            329          LEA     __D1, A1        * Load 'D1'
+0000124A  43F9 00001455            329          LEA     __D1, A1        * Load 'D1'
 00001250  103C 000E                330          MOVE.B  #14, D0         * Load Trap #14 to print out
 00001254  4E4F                     331          TRAP    #15             * Perform Trap #14
 00001256  4E75                     332          RTS
 00001258                           333          
 00001258                           334  PRINTD2
-00001258  43F9 000013AB            335          LEA     __D2, A1        * Load 'D2'
+00001258  43F9 00001457            335          LEA     __D2, A1        * Load 'D2'
 0000125E  103C 000E                336          MOVE.B  #14, D0         * Load Trap #14 to print out
 00001262  4E4F                     337          TRAP    #15             * Perform Trap #14
 00001264  4E75                     338          RTS
 00001266                           339          
 00001266                           340  PRINTD3
-00001266  43F9 000013AD            341          LEA     __D3, A1        * Load 'D3'
+00001266  43F9 00001459            341          LEA     __D3, A1        * Load 'D3'
 0000126C  103C 000E                342          MOVE.B  #14, D0         * Load Trap #14 to print out
 00001270  4E4F                     343          TRAP    #15             * Perform Trap #14
 00001272  4E75                     344          RTS
 00001274                           345          
 00001274                           346  PRINTD4
-00001274  43F9 000013AF            347          LEA     __D4, A1        * Load 'D4'
+00001274  43F9 0000145B            347          LEA     __D4, A1        * Load 'D4'
 0000127A  103C 000E                348          MOVE.B  #14, D0         * Load Trap #14 to print out
 0000127E  4E4F                     349          TRAP    #15             * Perform Trap #14
 00001280  4E75                     350          RTS
 00001282                           351          
 00001282                           352  PRINTD5
-00001282  43F9 000013B1            353          LEA     __D5, A1        * Load 'D5'
+00001282  43F9 0000145D            353          LEA     __D5, A1        * Load 'D5'
 00001288  103C 000E                354          MOVE.B  #14, D0         * Load Trap #14 to print out
 0000128C  4E4F                     355          TRAP    #15             * Perform Trap #14
 0000128E  4E75                     356          RTS
 00001290                           357          
 00001290                           358  PRINTD6
-00001290  43F9 000013B3            359          LEA     __D6, A1        * Load 'D6'
+00001290  43F9 0000145F            359          LEA     __D6, A1        * Load 'D6'
 00001296  103C 000E                360          MOVE.B  #14, D0         * Load Trap #14 to print out
 0000129A  4E4F                     361          TRAP    #15             * Perform Trap #14
 0000129C  4E75                     362          RTS
 0000129E                           363          
 0000129E                           364  PRINTD7
-0000129E  43F9 000013B5            365          LEA     __D7, A1        * Load 'D7'
+0000129E  43F9 00001461            365          LEA     __D7, A1        * Load 'D7'
 000012A4  103C 000E                366          MOVE.B  #14, D0         * Load Trap #14 to print out
 000012A8  4E4F                     367          TRAP    #15             * Perform Trap #14
 000012AA  4E75                     368          RTS
@@ -383,318 +383,406 @@ Created On: 11/24/2014 10:28:35 AM
 000012AC                           379  UNKNOWNOP
 000012AC                           380  
 000012AC                           381  
-000012AC                           382  
-000012AC                           383  * --- OP 0001 ------------------------------------------
-000012AC                           384  * FUNCTIONS     MOVE.B
-000012AC                           385  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-000012AC                           386  * ADDR REG        
-000012AC                           387  * POST COND     All registers return to their previous state.
-000012AC                           388  * ------------------------------------------------------
-000012AC                           389  OP0001  
+000012AC                           382  * --- OP 0001 ------------------------------------------
+000012AC                           383  * FUNCTIONS     MOVE.B
+000012AC                           384  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+000012AC                           385  * ADDR REG        
+000012AC                           386  * POST COND     All registers return to their previous state.
+000012AC                           387  * ------------------------------------------------------
+000012AC                           388  OP0001  
+000012AC                           389  
 000012AC                           390  
 000012AC                           391  
 000012AC                           392  
-000012AC                           393  
-000012AC                           394  * --- OP 0010 ------------------------------------------
-000012AC                           395  * FUNCTIONS     MOVE.L, MOVEA.L,
-000012AC                           396  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-000012AC                           397  * ADDR REG        
-000012AC                           398  * POST COND     All registers return to their previous state.
-000012AC                           399  * ------------------------------------------------------
-000012AC                           400  OP0010  
+000012AC                           393  * --- OP 0010 ------------------------------------------
+000012AC                           394  * FUNCTIONS     MOVE.L, MOVEA.L,
+000012AC                           395  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+000012AC                           396  * ADDR REG        
+000012AC                           397  * POST COND     All registers return to their previous state.
+000012AC                           398  * ------------------------------------------------------
+000012AC                           399  OP0010  
+000012AC                           400  
 000012AC                           401  
-000012AC                           402  
-000012AC                           403  * --- OP 0011 ------------------------------------------
-000012AC                           404  * FUNCTIONS     MOVE.W, MOVEA.W
-000012AC                           405  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-000012AC                           406  * ADDR REG        
-000012AC                           407  * POST COND     All registers return to their previous state.
-000012AC                           408  * ------------------------------------------------------
-000012AC                           409  OP0011
-000012AC  48A7 FFFE                410      MOVEM   D0-D7/A0-A6, -(A7)
-000012B0                           411      
-000012B0  3C3C 0006                412      MOVE.W  #6,D6
-000012B4  3E3C 0008                413      MOVE.W  #8,D7
-000012B8                           414      
-000012B8  6100 0072                415      BSR     BITMASK
-000012BC                           416      
-000012BC  CC42                     417      AND.W   D2,D6
-000012BE                           418      
-000012BE  BC7C 0040                419      CMP     #%0000000001000000,D6
-000012C2  6600 0004                420      BNE     NEXT15
-000012C6  61FE                     421      BSR     * for MOVEA.W
-000012C8                           422      
-000012C8                           423  NEXT15
-000012C8                           424  
-000012C8                           425  
-000012C8                           426  * --- OP 0100 ------------------------------------------
-000012C8                           427  * FUNCTIONS     NO_OP, MOVEM, LEA, NEG, JSR, RTS
-000012C8                           428  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-000012C8                           429  * ADDR REG        
-000012C8                           430  * POST COND     All registers return to their previous state.
-000012C8                           431  * ------------------------------------------------------
-000012C8                           432  OP0100  * TODO: movem, lea, neg, jsr, rts
-000012C8                           433  
-000012C8  48A7 C0C0                434          MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
-000012CC                           435          
-000012CC                           436          * prep values for BITMASK subroutine
-000012CC  3C3C 0008                437          MOVE.W  #8,D6
-000012D0  3E3C 000B                438          MOVE.W  #11,D7
-000012D4                           439          
-000012D4  6100 0056                440          BSR     BITMASK
-000012D8                           441          
-000012D8  CC42                     442          AND     D2,D6                   * apply bitmask
-000012DA                           443          
-000012DA  0C46 0400                444          CMPI    #%0000010000000000,D6   * are we NEG?
-000012DE  6600 0012                445          BNE     NEXT19                  * not neg
-000012E2                           446        
-000012E2                           447          * it is NEG, print
-000012E2  43F9 0000137C            448          LEA     NEGOP,A1
-000012E8  103C 000E                449          MOVE.B  #14,D0
-000012EC  4E4F                     450          TRAP    #15
-000012EE                           451          
-000012EE  6000 0036                452          BRA     NEXT17 * we found the op, move to next iteration
-000012F2                           453          
-000012F2                           454  NEXT19 * is it MOVEM?
-000012F2                           455  
-000012F2                           456          * prep values for BITMASK subroutine
-000012F2  3C3C 0007                457          MOVE.W  #7,D6
-000012F6  3E3C 0009                458          MOVE.W  #9,D7
-000012FA                           459          
-000012FA  6100 0030                460          BSR     BITMASK
-000012FE                           461          
-000012FE  CC42                     462          AND     D2,D6   * apply bitmask
-00001300                           463          
-00001300  0C46 0080                464          CMPI    #%0000000010000000,D6 * is it MOVEM?
-00001304  6600 0014                465          BNE     NEXT18          * it is not MOVEM
-00001308                           466          
-00001308                           467          * it is MOVEM
-00001308  43F9 00001389            468          LEA     MOVEMOP,A1
-0000130E  103C 000E                469          MOVE.B  #14,D0          * Print a newline
-00001312  4E4F                     470          TRAP    #15
-00001314                           471          
-00001314  341A                     472          MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
-00001316                           473          
-00001316  6000 000E                474          BRA     NEXT17
-0000131A                           475  NEXT18
-0000131A                           476          
-0000131A  43F9 00001373            477          LEA     NOOPERATION,A1
-00001320  103C 000E                478          MOVE.B  #14,D0          * Print a newline
-00001324  4E4F                     479          TRAP    #15
-00001326                           480          
-00001326                           481  NEXT17
-00001326  4C9F 0303                482          MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
-0000132A  4E75                     483          RTS
-0000132C                           484          
-0000132C                           485          
-0000132C                           486          
-0000132C                           487  
-0000132C                           488  * --- OP 0101 ------------------------------------------
-0000132C                           489  * FUNCTIONS     SUBQ
-0000132C                           490  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-0000132C                           491  * ADDR REG        
-0000132C                           492  * POST COND     All registers return to their previous state.
-0000132C                           493  * ------------------------------------------------------
-0000132C                           494  OP0101
-0000132C                           495  
-0000132C                           496  
-0000132C                           497  
-0000132C                           498  * --- OP 0110 ------------------------------------------
-0000132C                           499  * FUNCTIONS     BCC, BCS, BGE, BLT, BVC, BRA
-0000132C                           500  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-0000132C                           501  * ADDR REG        
-0000132C                           502  * POST COND     All registers return to their previous state.
-0000132C                           503  * ------------------------------------------------------
-0000132C                           504  OP0110
-0000132C                           505  
-0000132C                           506  
-0000132C                           507  
-0000132C                           508  
-0000132C                           509  * --- OP 0111 ------------------------------------------
-0000132C                           510  * FUNCTIONS     
-0000132C                           511  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-0000132C                           512  * ADDR REG        
-0000132C                           513  * POST COND     All registers return to their previous state.
-0000132C                           514  * ------------------------------------------------------
-0000132C                           515  OP0111
-0000132C                           516  
-0000132C                           517  
-0000132C                           518  
-0000132C                           519  * --- OP 1000 ------------------------------------------
-0000132C                           520  * FUNCTIONS     DIVS, OR
-0000132C                           521  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-0000132C                           522  * ADDR REG        
-0000132C                           523  * POST COND     All registers return to their previous state.
-0000132C                           524  * ------------------------------------------------------
-0000132C                           525  OP1000
-0000132C                           526  
-0000132C                           527  
-0000132C                           528  
-0000132C                           529  * --- OP 1001 ------------------------------------------
-0000132C                           530  * FUNCTIONS     SUB
-0000132C                           531  * DATA REG      D0, D1 for output. D2 for entire instruction. D6 for bitmask.
-0000132C                           532  * ADDR REG        
-0000132C                           533  * POST COND     All registers return to their previous state.
-0000132C                           534  * ------------------------------------------------------
-0000132C                           535  OP1001
-0000132C                           536  
-0000132C                           537  
-0000132C                           538  
-0000132C                           539  * --- OP 1010 ------------------------------------------
-0000132C                           540  * FUNCTIONS     
-0000132C                           541  * DATA REG      D0, D1 for output. D2 for entire instruction. D6 for bitmask.
-0000132C                           542  * ADDR REG        
-0000132C                           543  * POST COND     All registers return to their previous state.
-0000132C                           544  * ------------------------------------------------------
-0000132C                           545  OP1010
-0000132C                           546  
-0000132C                           547  
-0000132C                           548  * --- OP 1011 ------------------------------------------
-0000132C                           549  * FUNCTIONS     EOR, CMP 
-0000132C                           550  * DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
-0000132C                           551  * ADDR REG        
-0000132C                           552  * POST COND     All registers return to their previous state.
-0000132C                           553  * ------------------------------------------------------
-0000132C                           554  OP1011
-0000132C                           555  
-0000132C                           556  
-0000132C                           557  * --- OP 1100 ------------------------------------------
-0000132C                           558  * FUNCTIONS     MULS
-0000132C                           559  * DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
-0000132C                           560  * ADDR REG        
-0000132C                           561  * POST COND     All registers return to their previous state.
-0000132C                           562  * ------------------------------------------------------
-0000132C                           563  OP1100
-0000132C                           564  
-0000132C                           565  
-0000132C                           566  
-0000132C                           567  * --- OP 1101 ------------------------------------------
-0000132C                           568  * FUNCTIONS     ADD, ADDA,
-0000132C                           569  * DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
-0000132C                           570  * ADDR REG        
-0000132C                           571  * POST COND     All registers return to their previous state.
-0000132C                           572  * ------------------------------------------------------
-0000132C                           573  OP1101
-0000132C                           574  
-0000132C                           575  
-0000132C                           576  
-0000132C                           577  * --- OP 1110 ------------------------------------------
-0000132C                           578  * FUNCTIONS     LSL, LSR, ASL, ASR, ROL, ROR, 
-0000132C                           579  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-0000132C                           580  * ADDR REG        
-0000132C                           581  * POST COND     All registers return to their previous state.
-0000132C                           582  * ------------------------------------------------------
-0000132C                           583  OP1110
-0000132C                           584  
-0000132C                           585  
-0000132C                           586  
-0000132C                           587  
-0000132C                           588  * --- OP 1111 ------------------------------------------
-0000132C                           589  * FUNCTIONS     
-0000132C                           590  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-0000132C                           591  * ADDR REG        
-0000132C                           592  * POST COND     All registers return to their previous state.
-0000132C                           593  * ------------------------------------------------------
-0000132C                           594  OP1111
-0000132C                           595  
-0000132C                           596  
-0000132C                           597  
-0000132C                           598  
-0000132C                           599  
-0000132C                           600  
-0000132C                           601   * --- BITMASK ----------------------------------------------------------------
-0000132C                           602   *@pre      D6 contains the starting bit you want masked, D7 the ending bit
-0000132C                           603   *
-0000132C                           604   *@post     D6 contains the bitmask, ready for use
-0000132C                           605   
-0000132C                           606  BITMASK
-0000132C  3F05                     607          MOVE    D5,-(A7)    * push D5 onto the stack so we can use it to
-0000132E  4245                     608          CLR     D5          * clear D5 so we can use it
-00001330                           609  LOOPBIT 
-00001330  0DC5                     610          BSET    D6,D5       * set the D6th bit in D5 to 1
-00001332  5246                     611          ADD     #1,D6       * increment D6
-00001334                           612          
-00001334  BC47                     613          CMP     D7,D6       * have we finished?
-00001336  6E00 0004                614          BGT     BITMASKDONE * yes
-0000133A  60F4                     615          BRA     LOOPBIT     * no, iterate again
-0000133C                           616          
-0000133C                           617  BITMASKDONE
-0000133C                           618  
-0000133C  2C05                     619          MOVE.L  D5,D6
-0000133E  3A1F                     620          MOVE    (A7)+,D5    * restore D5
-00001340  4E75                     621          RTS
-00001342                           622          
-00001342                           623   * --- OP0100 -----------------------------------------------------------------
-00001342                           624   * @pre      D2 contains the opcode
-00001342                           625   *
-00001342                           626   * @post     all registers are returned to their previous state
-00001342                           627  
-00001342                           628  
-00001342                           629  
-00001342                           630   * ----------------------------------------------------------------------------
-00001342                           631   * ----------------------------------------------------------------------------
-00001342                           632   * Constants for printing information to the console
-00001342                           633  
-00001342  =0000000D                634  CR      EQU     $0D
-00001342  =0000000A                635  LF      EQU     $0A
-00001342= 45 4E 54 45 52 20 ...    636  MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
-0000135A= 45 4E 54 45 52 20 ...    637  MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
-00001370= 0D 0A 00                 638  NEWLINE     DC.B    CR,LF,0
-00001373= 4E 4F 50 00              639  NOOPERATION DC.B    'NOP',0
-00001377= 42 43 4C 52 00           640  BCLROP      DC.B    'BCLR',0
-0000137C= 4E 45 47 00              641  NEGOP       DC.B    'NEG',0
-00001380= 4F 52 49 00              642  ORIOP       DC.B    'ORI',0
-00001384= 43 4D 50 49 00           643  CMPIOP      DC.B    'CMPI',0
-00001389= 4D 4F 56 45 4D 00        644  MOVEMOP     DC.B    'MOVEM',0
-0000138F                           645  
-0000138F                           646   * ----------------------------------------------------------------------------
-0000138F                           647   * ----------------------------------------------------------------------------
-0000138F                           648   * Data defined constants
-0000138F                           649   *   - B/W/L (representing Byte, Word, Long)
-0000138F                           650   *   - A0-A7 (representing the 8 address registers)
-0000138F                           651   *   - D0-D7 (representing the 8 data registers)
-0000138F                           652   * ----------------------------------------------------------------------------
-0000138F= 23                       653  IMD        DC.B    '#'
-00001390= 2C                       654  COMMA      DC.B    ','
-00001391= 42 20                    655  __B        DC.B    'B '
-00001393= 57 20                    656  __W        DC.B    'W '
-00001395= 4C 20                    657  __L        DC.B    'L '
-00001397                           658  
-00001397= 41 30                    659  __A0        DC.B   'A0'
-00001399= 41 31                    660  __A1        DC.B   'A1'    
-0000139B= 41 32                    661  __A2        DC.B   'A2'
-0000139D= 41 33                    662  __A3        DC.B   'A3'
-0000139F= 41 34                    663  __A4        DC.B   'A4'
-000013A1= 41 35                    664  __A5        DC.B   'A5'
-000013A3= 41 36                    665  __A6        DC.B   'A6'
-000013A5= 41 37                    666  __A7        DC.B   'A7'
-000013A7                           667  
-000013A7= 44 30                    668  __D0        DC.B   'D0'
-000013A9= 44 31                    669  __D1        DC.B   'D1'
-000013AB= 44 32                    670  __D2        DC.B   'D2'
-000013AD= 44 33                    671  __D3        DC.B   'D3'
-000013AF= 44 34                    672  __D4        DC.B   'D4'
-000013B1= 44 35                    673  __D5        DC.B   'D5'
-000013B3= 44 36                    674  __D6        DC.B   'D6'
-000013B5= 44 37                    675  __D7        DC.B   'D7'
-000013B7                           676   * ---------------------------------------------------------------------------
-000013B7                           677   * End of definition segment
-000013B7                           678   * ---------------------------------------------------------------------------
-000013B7                           679   * ---------------------------------------------------------------------------
-000013B7                           680  
-000013B7                           681  * Put variables and constants here
-000013B7                           682  
-00004000                           683      ORG $4000
-00004000                           684  
-00004000  4E71                     685      NOP
-00004002  103C 009A                686      MOVE.B   #%10011010, D0
-00004006  123C 00A9                687      MOVE.B   #%10101001, D1
-0000400A  D200                     688      ADD.B    D0,D1
-0000400C  48A7 4000                689      MOVEM    D1,-(A7)
-00004010  4443                     690      NEG.W    D3
-00004012                           691  
-00004012                           692  END
-00004012                           693      END    START        ; last line of source
+000012AC                           402  * --- OP 0011 ------------------------------------------
+000012AC                           403  * FUNCTIONS     MOVE.W, MOVEA.W
+000012AC                           404  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+000012AC                           405  * ADDR REG        
+000012AC                           406  * POST COND     All registers return to their previous state.
+000012AC                           407  * ------------------------------------------------------
+000012AC                           408  OP0011
+000012AC  48A7 FFFE                409      MOVEM   D0-D7/A0-A6, -(A7)
+000012B0                           410      
+000012B0  3C3C 0006                411      MOVE.W  #6,D6
+000012B4  3E3C 0008                412      MOVE.W  #8,D7
+000012B8                           413      
+000012B8  6100 0112                414      BSR     BITMASK
+000012BC                           415      
+000012BC  CC42                     416      AND.W   D2,D6
+000012BE                           417      
+000012BE  BC7C 0040                418      CMP     #%0000000001000000,D6
+000012C2  6600 00FA                419      BNE     NEXT15
+000012C6  61FE                     420      BSR     * for MOVEA.W
+000012C8                           421  
+000012C8                           422  
+000012C8                           423  * --- OP 0100 ------------------------------------------
+000012C8                           424  * FUNCTIONS     NO_OP, MOVEM, LEA, NEG, JSR, RTS
+000012C8                           425  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+000012C8                           426  * ADDR REG        
+000012C8                           427  * POST COND     All registers return to their previous state.
+000012C8                           428  * ------------------------------------------------------
+000012C8                           429  OP0100  * TODO: lea, jsr, rts
+000012C8                           430  
+000012C8  48A7 C0C0                431          MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
+000012CC                           432          
+000012CC                           433          *NOP
+000012CC  0C42 4E71                434          CMPI    #%0100111001110001,D2
+000012D0  6600 0012                435          BNE     NEXT20
+000012D4                           436          
+000012D4  43F9 00001413            437          LEA     NOOPERATION,A1
+000012DA  103C 000E                438          MOVE.B  #14,D0          * Print a newline
+000012DE  4E4F                     439          TRAP    #15
+000012E0                           440          
+000012E0  6000 00E4                441          BRA     DONE *we found it, move on to the next iteration
+000012E4                           442  NEXT20 *NEG
+000012E4                           443          
+000012E4                           444          * prep values for BITMASK subroutine
+000012E4  4246                     445          CLR     D6
+000012E6  4247                     446          CLR     D7
+000012E8  3C3C 0008                447          MOVE.W  #8,D6
+000012EC  3E3C 000B                448          MOVE.W  #11,D7
+000012F0                           449          
+000012F0  6100 00DA                450          BSR     BITMASK
+000012F4                           451          
+000012F4  CC42                     452          AND     D2,D6                   * apply bitmask
+000012F6                           453          
+000012F6  0C46 0400                454          CMPI    #%0000010000000000,D6   * are we NEG?
+000012FA  6600 0012                455          BNE     NEXT19                  * not neg
+000012FE                           456        
+000012FE                           457          * it is NEG, print
+000012FE  43F9 00001417            458          LEA     NEGOP,A1
+00001304  103C 000E                459          MOVE.B  #14,D0
+00001308  4E4F                     460          TRAP    #15
+0000130A                           461          
+0000130A  6000 00BA                462          BRA     DONE * we found the op, move to next iteration
+0000130E                           463          
+0000130E                           464  NEXT19 *MOVEM
+0000130E                           465  
+0000130E                           466          * prep values for BITMASK subroutine
+0000130E  4246                     467          CLR     D6
+00001310  4247                     468          CLR     D7
+00001312  3C3C 0007                469          MOVE.W  #7,D6
+00001316  3E3C 0009                470          MOVE.W  #9,D7
+0000131A                           471          
+0000131A  6100 00B0                472          BSR     BITMASK
+0000131E                           473          
+0000131E  CC42                     474          AND     D2,D6   * apply bitmask
+00001320                           475          
+00001320  0C46 0080                476          CMPI    #%0000000010000000,D6 * is it MOVEM?
+00001324  6600 0014                477          BNE     NEXT18          * it is not MOVEM
+00001328                           478          
+00001328                           479          * it is MOVEM
+00001328  43F9 0000141B            480          LEA     MOVEMOP,A1
+0000132E  103C 000E                481          MOVE.B  #14,D0          * Print a newline
+00001332  4E4F                     482          TRAP    #15
+00001334                           483          
+00001334  341A                     484          MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+00001336                           485          
+00001336  6000 008E                486          BRA     DONE          * we found and printed, move on to the next iteration
+0000133A                           487          
+0000133A                           488  NEXT18 *JSR
+0000133A                           489          * prep values for BITMASK subroutine
+0000133A  4246                     490          CLR     D6
+0000133C  4247                     491          CLR     D7
+0000133E  3C3C 0006                492          MOVE.W  #6,D6
+00001342  3E3C 0008                493          MOVE.W  #8,D7
+00001346                           494          
+00001346  6100 0084                495          BSR     BITMASK
+0000134A                           496          
+0000134A  CC42                     497          AND     D2,D6   * apply bitmask
+0000134C                           498          
+0000134C  0C46 0080                499          CMPI    #%0000000010000000,D6
+00001350  6600 0016                500          BNE     NEXT17          * it's not JSR
+00001354                           501          
+00001354  43F9 00001421            502          LEA     JSROP,A1
+0000135A  103C 000E                503          MOVE.B  #14,D0          * Print a newline and JSR
+0000135E  4E4F                     504          TRAP    #15
+00001360                           505          
+00001360  341A                     506          MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+00001362  341A                     507          MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+00001364                           508          
+00001364  6000 0060                509          BRA     DONE          * we already found instruction, next iteration
+00001368                           510  NEXT17 *RTS
+00001368                           511  
+00001368                           512          * prep values for BITMASK subroutine
+00001368  4246                     513          CLR     D6
+0000136A  4247                     514          CLR     D7
+0000136C  3C3C 0006                515          MOVE.W  #6,D6
+00001370  3E3C 0008                516          MOVE.W  #8,D7
+00001374                           517          
+00001374  6100 0056                518          BSR     BITMASK
+00001378                           519          
+00001378  CC42                     520          AND     D2,D6   * apply bitmask
+0000137A                           521          
+0000137A  0C46 0040                522          CMPI    #%0000000001000000,D6
+0000137E  6600 0012                523          BNE     NEXT16          * it's not RTS
+00001382                           524          
+00001382  43F9 00001425            525          LEA     RTSOP,A1
+00001388  103C 000E                526          MOVE.B  #14,D0          * Print a newline and RTS
+0000138C  4E4F                     527          TRAP    #15
+0000138E                           528                  
+0000138E  6000 0036                529          BRA     DONE          * we already found instruction, next iteration
+00001392                           530  NEXT16 *LEA
+00001392                           531         
+00001392                           532          * prep values for BITMASK subroutine
+00001392  4246                     533           CLR     D6
+00001394  4247                     534          CLR     D7
+00001396  3C3C 0006                535          MOVE.W  #6,D6
+0000139A  3E3C 0008                536          MOVE.W  #8,D7
+0000139E                           537          
+0000139E  6100 002C                538          BSR     BITMASK
+000013A2                           539          
+000013A2  CC42                     540          AND     D2,D6   * apply bitmask
+000013A4                           541          
+000013A4  0C46 01C0                542          CMPI    #%0000000111000000,D6
+000013A8  6600 0014                543          BNE     NEXT15          * it's not LEA, we dont know what it is
+000013AC                           544          
+000013AC  43F9 00001429            545          LEA     LEAOP,A1
+000013B2  103C 000E                546          MOVE.B  #14,D0          * Print a newline and LEA
+000013B6  4E4F                     547          TRAP    #15
+000013B8                           548          
+000013B8  341A                     549          MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+000013BA                           550                  
+000013BA  6000 000A                551          BRA     DONE          * we already found instruction, next iteration
+000013BE                           552          
+000013BE                           553  NEXT15 *dont know what it is
+000013BE                           554      
+000013BE                           555          * we don't know what it is, print it out
+000013BE  3202                     556          MOVE.W  D2,D1           * Print opcode we don't recognize
+000013C0                           557  
+000013C0  103C 0003                558          MOVE.B  #3,D0           * Print out operation we don't recognize
+000013C4  4E4F                     559          TRAP    #15             * Perform Trap #3
+000013C6                           560          
+000013C6                           561  DONE
+000013C6  4C9F 0303                562          MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
+000013CA  4E75                     563          RTS
+000013CC                           564          
+000013CC                           565          
+000013CC                           566          
+000013CC                           567  
+000013CC                           568  * --- OP 0101 ------------------------------------------
+000013CC                           569  * FUNCTIONS     SUBQ
+000013CC                           570  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+000013CC                           571  * ADDR REG        
+000013CC                           572  * POST COND     All registers return to their previous state.
+000013CC                           573  * ------------------------------------------------------
+000013CC                           574  OP0101
+000013CC                           575  
+000013CC                           576  
+000013CC                           577  
+000013CC                           578  * --- OP 0110 ------------------------------------------
+000013CC                           579  * FUNCTIONS     BCC, BCS, BGE, BLT, BVC, BRA
+000013CC                           580  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+000013CC                           581  * ADDR REG        
+000013CC                           582  * POST COND     All registers return to their previous state.
+000013CC                           583  * ------------------------------------------------------
+000013CC                           584  OP0110
+000013CC                           585  
+000013CC                           586  
+000013CC                           587  
+000013CC                           588  
+000013CC                           589  * --- OP 0111 ------------------------------------------
+000013CC                           590  * FUNCTIONS     
+000013CC                           591  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+000013CC                           592  * ADDR REG        
+000013CC                           593  * POST COND     All registers return to their previous state.
+000013CC                           594  * ------------------------------------------------------
+000013CC                           595  OP0111
+000013CC                           596  
+000013CC                           597  
+000013CC                           598  
+000013CC                           599  * --- OP 1000 ------------------------------------------
+000013CC                           600  * FUNCTIONS     DIVS, OR
+000013CC                           601  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+000013CC                           602  * ADDR REG        
+000013CC                           603  * POST COND     All registers return to their previous state.
+000013CC                           604  * ------------------------------------------------------
+000013CC                           605  OP1000
+000013CC                           606  
+000013CC                           607  
+000013CC                           608  
+000013CC                           609  * --- OP 1001 ------------------------------------------
+000013CC                           610  * FUNCTIONS     SUB
+000013CC                           611  * DATA REG      D0, D1 for output. D2 for entire instruction. D6 for bitmask.
+000013CC                           612  * ADDR REG        
+000013CC                           613  * POST COND     All registers return to their previous state.
+000013CC                           614  * ------------------------------------------------------
+000013CC                           615  OP1001
+000013CC                           616  
+000013CC                           617  
+000013CC                           618  
+000013CC                           619  * --- OP 1010 ------------------------------------------
+000013CC                           620  * FUNCTIONS     
+000013CC                           621  * DATA REG      D0, D1 for output. D2 for entire instruction. D6 for bitmask.
+000013CC                           622  * ADDR REG        
+000013CC                           623  * POST COND     All registers return to their previous state.
+000013CC                           624  * ------------------------------------------------------
+000013CC                           625  OP1010
+000013CC                           626  
+000013CC                           627  
+000013CC                           628  * --- OP 1011 ------------------------------------------
+000013CC                           629  * FUNCTIONS     EOR, CMP 
+000013CC                           630  * DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
+000013CC                           631  * ADDR REG        
+000013CC                           632  * POST COND     All registers return to their previous state.
+000013CC                           633  * ------------------------------------------------------
+000013CC                           634  OP1011
+000013CC                           635  
+000013CC                           636  
+000013CC                           637  * --- OP 1100 ------------------------------------------
+000013CC                           638  * FUNCTIONS     MULS
+000013CC                           639  * DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
+000013CC                           640  * ADDR REG        
+000013CC                           641  * POST COND     All registers return to their previous state.
+000013CC                           642  * ------------------------------------------------------
+000013CC                           643  OP1100
+000013CC                           644  
+000013CC                           645  
+000013CC                           646  
+000013CC                           647  * --- OP 1101 ------------------------------------------
+000013CC                           648  * FUNCTIONS     ADD, ADDA,
+000013CC                           649  * DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
+000013CC                           650  * ADDR REG        
+000013CC                           651  * POST COND     All registers return to their previous state.
+000013CC                           652  * ------------------------------------------------------
+000013CC                           653  OP1101
+000013CC                           654  
+000013CC                           655  
+000013CC                           656  
+000013CC                           657  * --- OP 1110 ------------------------------------------
+000013CC                           658  * FUNCTIONS     LSL, LSR, ASL, ASR, ROL, ROR, 
+000013CC                           659  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+000013CC                           660  * ADDR REG        
+000013CC                           661  * POST COND     All registers return to their previous state.
+000013CC                           662  * ------------------------------------------------------
+000013CC                           663  OP1110
+000013CC                           664  
+000013CC                           665  
+000013CC                           666  
+000013CC                           667  
+000013CC                           668  * --- OP 1111 ------------------------------------------
+000013CC                           669  * FUNCTIONS     
+000013CC                           670  * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+000013CC                           671  * ADDR REG        
+000013CC                           672  * POST COND     All registers return to their previous state.
+000013CC                           673  * ------------------------------------------------------
+000013CC                           674  OP1111
+000013CC                           675  
+000013CC                           676  
+000013CC                           677  
+000013CC                           678  
+000013CC                           679  
+000013CC                           680  
+000013CC                           681   * --- BITMASK ----------------------------------------------------------------
+000013CC                           682   *@pre      D6 contains the starting bit you want masked, D7 the ending bit
+000013CC                           683   *
+000013CC                           684   *@post     D6 contains the bitmask, ready for use
+000013CC                           685   
+000013CC                           686  BITMASK
+000013CC  3F05                     687          MOVE    D5,-(A7)    * push D5 onto the stack so we can use it to
+000013CE  4245                     688          CLR     D5          * clear D5 so we can use it
+000013D0                           689  LOOPBIT 
+000013D0  0DC5                     690          BSET    D6,D5       * set the D6th bit in D5 to 1
+000013D2  5246                     691          ADD     #1,D6       * increment D6
+000013D4                           692          
+000013D4  BC47                     693          CMP     D7,D6       * have we finished?
+000013D6  6E00 0004                694          BGT     BITMASKDONE * yes
+000013DA  60F4                     695          BRA     LOOPBIT     * no, iterate again
+000013DC                           696          
+000013DC                           697  BITMASKDONE
+000013DC                           698  
+000013DC  2C05                     699          MOVE.L  D5,D6
+000013DE  3A1F                     700          MOVE    (A7)+,D5    * restore D5
+000013E0  4E75                     701          RTS
+000013E2                           702          
+000013E2                           703   * --- OP0100 -----------------------------------------------------------------
+000013E2                           704   * @pre      D2 contains the opcode
+000013E2                           705   *
+000013E2                           706   * @post     all registers are returned to their previous state
+000013E2                           707  
+000013E2                           708  
+000013E2                           709  
+000013E2                           710   * ----------------------------------------------------------------------------
+000013E2                           711   * ----------------------------------------------------------------------------
+000013E2                           712   * Constants for printing information to the console
+000013E2                           713  
+000013E2  =0000000D                714  CR      EQU     $0D
+000013E2  =0000000A                715  LF      EQU     $0A
+000013E2= 45 4E 54 45 52 20 ...    716  MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
+000013FA= 45 4E 54 45 52 20 ...    717  MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
+00001410= 0D 0A 00                 718  NEWLINE     DC.B    CR,LF,0
+00001413= 4E 4F 50 00              719  NOOPERATION DC.B    'NOP',0
+00001417= 4E 45 47 00              720  NEGOP       DC.B    'NEG',0
+0000141B= 4D 4F 56 45 4D 00        721  MOVEMOP     DC.B    'MOVEM',0
+00001421= 4A 53 52 00              722  JSROP       DC.B    'JSR',0
+00001425= 52 54 53 00              723  RTSOP       DC.B    'RTS',0
+00001429= 4C 45 41 00              724  LEAOP       DC.B    'LEA',0
+0000142D= 42 43 4C 52 00           725  BCLROP      DC.B    'BCLR',0
+00001432= 4F 52 49 00              726  ORIOP       DC.B    'ORI',0
+00001436= 43 4D 50 49 00           727  CMPIOP      DC.B    'CMPI',0
+0000143B                           728  
+0000143B                           729   * ----------------------------------------------------------------------------
+0000143B                           730   * ----------------------------------------------------------------------------
+0000143B                           731   * Data defined constants
+0000143B                           732   *   - B/W/L (representing Byte, Word, Long)
+0000143B                           733   *   - A0-A7 (representing the 8 address registers)
+0000143B                           734   *   - D0-D7 (representing the 8 data registers)
+0000143B                           735   * ----------------------------------------------------------------------------
+0000143B                           736  
+0000143B= 23                       737  IMD        DC.B    '#'
+0000143C= 2C                       738  COMMA      DC.B    ','
+0000143D= 42 20                    739  __B        DC.B    'B '
+0000143F= 57 20                    740  __W        DC.B    'W '
+00001441= 4C 20                    741  __L        DC.B    'L '
+00001443                           742  
+00001443= 41 30                    743  __A0        DC.B   'A0'
+00001445= 41 31                    744  __A1        DC.B   'A1'    
+00001447= 41 32                    745  __A2        DC.B   'A2'
+00001449= 41 33                    746  __A3        DC.B   'A3'
+0000144B= 41 34                    747  __A4        DC.B   'A4'
+0000144D= 41 35                    748  __A5        DC.B   'A5'
+0000144F= 41 36                    749  __A6        DC.B   'A6'
+00001451= 41 37                    750  __A7        DC.B   'A7'
+00001453                           751  
+00001453= 44 30                    752  __D0        DC.B   'D0'
+00001455= 44 31                    753  __D1        DC.B   'D1'
+00001457= 44 32                    754  __D2        DC.B   'D2'
+00001459= 44 33                    755  __D3        DC.B   'D3'
+0000145B= 44 34                    756  __D4        DC.B   'D4'
+0000145D= 44 35                    757  __D5        DC.B   'D5'
+0000145F= 44 36                    758  __D6        DC.B   'D6'
+00001461= 44 37                    759  __D7        DC.B   'D7'
+00001463                           760   * ---------------------------------------------------------------------------
+00001463                           761   * End of definition segment
+00001463                           762   * ---------------------------------------------------------------------------
+00001463                           763   * ---------------------------------------------------------------------------
+00001463                           764  
+00001463                           765  * Put variables and constants here
+00001463                           766  
+00004000                           767      ORG $4000
+00004000                           768  
+00004000  4E71                     769      NOP
+00004002  103C 009A                770      MOVE.B   #%10011010, D0
+00004006  123C 00A9                771      MOVE.B   #%10101001, D1
+0000400A  D200                     772      ADD.B    D0,D1
+0000400C  48A7 4000                773      MOVEM    D1,-(A7)
+00004010  43F8 1421                774      LEA      JSROP,A1
+00004014  4443                     775      NEG.W    D3
+00004016  4EB9 0000401C            776      JSR      END
+0000401C                           777  
+0000401C                           778  END
+0000401C  4E75                     779      RTS
+0000401E                           780  RLLYEND
+0000401E                           781      END    START        ; last line of source
 
 No errors detected
 No warnings generated
@@ -703,60 +791,65 @@ No warnings generated
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-BCLROP              1377
-BITMASK             132C
-BITMASKDONE         133C
+BCLROP              142D
+BITMASK             13CC
+BITMASKDONE         13DC
 CMPIBYTE            10EE
 CMPIEA              1162
 CMPILONG            113C
-CMPIOP              1384
+CMPIOP              1436
 CMPIREG             11CE
 CMPIREG000          11EC
 CMPIREG001          11EC
 CMPIWORD            1116
-COMMA               1390
+COMMA               143C
 CR                  D
-END                 4012
-IMD                 138F
+DONE                13C6
+END                 401C
+IMD                 143B
 ISCMPI              10B4
 ISORI               10B4
 ITERATION           1058
+JSROP               1421
+LEAOP               1429
 LF                  A
 LOOP                103A
-LOOPBIT             1330
+LOOPBIT             13D0
 MODE_AN             12AC
 MODE_DN             11EC
 MODE_IAN            12AC
 MODE_IAN_POS        12AC
 MODE_IAN_PRE        12AC
-MOVEMOP             1389
-MSGEND              135A
-MSGSTART            1342
-NEGOP               137C
-NEWLINE             1370
-NEXT15              12C8
-NEXT16              1050
-NEXT17              1326
-NEXT18              131A
-NEXT19              12F2
-NOOPERATION         1373
+MOVEMOP             141B
+MSGEND              13FA
+MSGSTART            13E2
+NEGOP               1417
+NEWLINE             1410
+NEXT                1050
+NEXT15              13BE
+NEXT16              1392
+NEXT17              1368
+NEXT18              133A
+NEXT19              130E
+NEXT20              12E4
+NOOPERATION         1413
 NOTBCLR             1092
 OP0000              1068
 OP0001              12AC
 OP0010              12AC
 OP0011              12AC
 OP0100              12C8
-OP0101              132C
-OP0110              132C
-OP0111              132C
-OP1000              132C
-OP1001              132C
-OP1010              132C
-OP1011              132C
-OP1100              132C
-OP1101              132C
-OP1110              132C
-OP1111              132C
+OP0101              13CC
+OP0110              13CC
+OP0111              13CC
+OP1000              13CC
+OP1001              13CC
+OP1010              13CC
+OP1011              13CC
+OP1100              13CC
+OP1101              13CC
+OP1110              13CC
+OP1111              13CC
 OP_0000             0
 OP_0001             1000
 OP_0010             2000
@@ -773,7 +866,7 @@ OP_1100             C000
 OP_1101             D000
 OP_1110             E000
 OP_1111             F000
-ORIOP               1380
+ORIOP               1432
 PRINTD0             123C
 PRINTD1             124A
 PRINTD2             1258
@@ -782,24 +875,26 @@ PRINTD4             1274
 PRINTD5             1282
 PRINTD6             1290
 PRINTD7             129E
+RLLYEND             401E
+RTSOP               1425
 START               1000
 UNKNOWNOP           12AC
-__A0                1397
-__A1                1399
-__A2                139B
-__A3                139D
-__A4                139F
-__A5                13A1
-__A6                13A3
-__A7                13A5
-__B                 1391
-__D0                13A7
-__D1                13A9
-__D2                13AB
-__D3                13AD
-__D4                13AF
-__D5                13B1
-__D6                13B3
-__D7                13B5
-__L                 1395
-__W                 1393
+__A0                1443
+__A1                1445
+__A2                1447
+__A3                1449
+__A4                144B
+__A5                144D
+__A6                144F
+__A7                1451
+__B                 143D
+__D0                1453
+__D1                1455
+__D2                1457
+__D3                1459
+__D4                145B
+__D5                145D
+__D6                145F
+__D7                1461
+__L                 1441
+__W                 143F

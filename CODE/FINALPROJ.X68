@@ -95,11 +95,11 @@ LOOP
         AND.W   D2,D6           * Apply this bitmask
         
         CMP     #OP_0100,D6     * Does the operation start with 0100?
-        BNE     NEXT16          * No, check next case
+        BNE     NEXT            * No, check next case
         BSR     OP0100          * Branch to subroutine 0100
         BRA     ITERATION       * Move to next iteration of the loop
         
-NEXT16
+NEXT
         MOVE.W  D2,D1           * Print opcode we don't recognize
 
         MOVE.B  #3,D0           * Print out operation we don't recognize
@@ -122,7 +122,7 @@ ITERATION
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
 OP0000
-        MOVEM   D0-D1/A0-A1,-(A7)   * Push values to the stack to save
+ MOVEM   D0-D1/A0-A1,-(A7)   * Push values to the stack to save
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #8, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
@@ -379,7 +379,6 @@ MODE_IAN_PRE
 UNKNOWNOP
 
 
-
 * --- OP 0001 ------------------------------------------
 * FUNCTIONS     MOVE.B
 * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
@@ -419,8 +418,6 @@ OP0011
     CMP     #%0000000001000000,D6
     BNE     NEXT15
     BSR     * for MOVEA.W
-    
-NEXT15
 
 
 * --- OP 0100 ------------------------------------------
@@ -429,11 +426,24 @@ NEXT15
 * ADDR REG        
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
-OP0100  * TODO: movem, lea, neg, jsr, rts
+OP0100  * TODO: lea, jsr, rts
 
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
         
+        *NOP
+        CMPI    #%0100111001110001,D2
+        BNE     NEXT20
+        
+        LEA     NOOPERATION,A1
+        MOVE.B  #14,D0          * Print a newline
+        TRAP    #15
+        
+        BRA     DONE *we found it, move on to the next iteration
+NEXT20 *NEG
+        
         * prep values for BITMASK subroutine
+        CLR     D6
+        CLR     D7
         MOVE.W  #8,D6
         MOVE.W  #11,D7
         
@@ -449,11 +459,13 @@ OP0100  * TODO: movem, lea, neg, jsr, rts
         MOVE.B  #14,D0
         TRAP    #15
         
-        BRA     NEXT17 * we found the op, move to next iteration
+        BRA     DONE * we found the op, move to next iteration
         
-NEXT19 * is it MOVEM?
+NEXT19 *MOVEM
 
         * prep values for BITMASK subroutine
+        CLR     D6
+        CLR     D7
         MOVE.W  #7,D6
         MOVE.W  #9,D7
         
@@ -471,14 +483,82 @@ NEXT19 * is it MOVEM?
         
         MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
         
-        BRA     NEXT17
-NEXT18
+        BRA     DONE          * we found and printed, move on to the next iteration
         
-        LEA     NOOPERATION,A1
-        MOVE.B  #14,D0          * Print a newline
+NEXT18 *JSR
+        * prep values for BITMASK subroutine
+        CLR     D6
+        CLR     D7
+        MOVE.W  #6,D6
+        MOVE.W  #8,D7
+        
+        BSR     BITMASK
+        
+        AND     D2,D6   * apply bitmask
+        
+        CMPI    #%0000000010000000,D6
+        BNE     NEXT17          * it's not JSR
+        
+        LEA     JSROP,A1
+        MOVE.B  #14,D0          * Print a newline and JSR
         TRAP    #15
         
-NEXT17
+        MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+        MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+        
+        BRA     DONE          * we already found instruction, next iteration
+NEXT17 *RTS
+
+        * prep values for BITMASK subroutine
+        CLR     D6
+        CLR     D7
+        MOVE.W  #6,D6
+        MOVE.W  #8,D7
+        
+        BSR     BITMASK
+        
+        AND     D2,D6   * apply bitmask
+        
+        CMPI    #%0000000001000000,D6
+        BNE     NEXT16          * it's not RTS
+        
+        LEA     RTSOP,A1
+        MOVE.B  #14,D0          * Print a newline and RTS
+        TRAP    #15
+                
+        BRA     DONE          * we already found instruction, next iteration
+NEXT16 *LEA
+       
+        * prep values for BITMASK subroutine
+         CLR     D6
+        CLR     D7
+        MOVE.W  #6,D6
+        MOVE.W  #8,D7
+        
+        BSR     BITMASK
+        
+        AND     D2,D6   * apply bitmask
+        
+        CMPI    #%0000000111000000,D6
+        BNE     NEXT15          * it's not LEA, we dont know what it is
+        
+        LEA     LEAOP,A1
+        MOVE.B  #14,D0          * Print a newline and LEA
+        TRAP    #15
+        
+        MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+                
+        BRA     DONE          * we already found instruction, next iteration
+        
+NEXT15 *dont know what it is
+    
+        * we don't know what it is, print it out
+        MOVE.W  D2,D1           * Print opcode we don't recognize
+
+        MOVE.B  #3,D0           * Print out operation we don't recognize
+        TRAP    #15             * Perform Trap #3
+        
+DONE
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
         RTS
         
@@ -637,11 +717,14 @@ MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
 MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
 NOOPERATION DC.B    'NOP',0
-BCLROP      DC.B    'BCLR',0
 NEGOP       DC.B    'NEG',0
+MOVEMOP     DC.B    'MOVEM',0
+JSROP       DC.B    'JSR',0
+RTSOP       DC.B    'RTS',0
+LEAOP       DC.B    'LEA',0
+BCLROP      DC.B    'BCLR',0
 ORIOP       DC.B    'ORI',0
 CMPIOP      DC.B    'CMPI',0
-MOVEMOP     DC.B    'MOVEM',0
 
  * ----------------------------------------------------------------------------
  * ----------------------------------------------------------------------------
@@ -650,6 +733,7 @@ MOVEMOP     DC.B    'MOVEM',0
  *   - A0-A7 (representing the 8 address registers)
  *   - D0-D7 (representing the 8 data registers)
  * ----------------------------------------------------------------------------
+
 IMD        DC.B    '#'
 COMMA      DC.B    ','
 __B        DC.B    'B '
@@ -687,9 +771,13 @@ __D7        DC.B   'D7'
     MOVE.B   #%10101001, D1
     ADD.B    D0,D1
     MOVEM    D1,-(A7)
+    LEA      JSROP,A1
     NEG.W    D3
+    JSR      END
 
 END
+    RTS
+RLLYEND
     END    START        ; last line of source
 
 
