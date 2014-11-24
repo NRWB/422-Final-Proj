@@ -100,10 +100,13 @@ LOOP
         BRA     ITERATION       * Move to next iteration of the loop
         
 NEXT
+        MOVE.W  D2,-(A7)
         MOVE.W  D2,D1           * Print opcode we don't recognize
+        MOVE.B  #16,D2
 
-        MOVE.B  #3,D0           * Print out operation we don't recognize
+        MOVE.B  #16,D0           * Print out operation we don't recognize
         TRAP    #15             * Perform Trap #3
+        MOVE.W  (A7)+,D2
         
 ITERATION
         MOVE    (A7)+,D6        * restore the bitmask to its previous state
@@ -134,7 +137,7 @@ OP0000
         LEA     BCLROP,A1           * We found BCLR
         MOVE.B  #14,D0              * Trap #14 prints out the data
         TRAP    #15                 * Perform Trap #14
-        BRA     NEXT17              * Found the op, move to next iteration
+        BRA     DONE              * Found the op, move to next iteration
 
 NOTBCLR * Possible options left are ORI or CMPI
         MOVE.W  #9, D6              * Prep lower value for bitmask
@@ -416,7 +419,7 @@ OP0011
     AND.W   D2,D6
     
     CMP     #%0000000001000000,D6
-    BNE     NEXT15
+    *BNE     NEXT15
     BSR     * for MOVEA.W
 
 
@@ -432,27 +435,25 @@ OP0100  * TODO: lea, jsr, rts
         
         *NOP
         CMPI    #%0100111001110001,D2
-        BNE     NEXT20
+        BNE     NOTNOP
         
         LEA     NOOPERATION,A1
         MOVE.B  #14,D0          * Print a newline
         TRAP    #15
         
         BRA     DONE *we found it, move on to the next iteration
-NEXT20 *NEG
+NOTNOP *NEG
         
         * prep values for BITMASK subroutine
-        CLR     D6
-        CLR     D7
-        MOVE.W  #8,D6
-        MOVE.W  #11,D7
+        MOVE.L  #8,D6
+        MOVE.L  #11,D7
         
         BSR     BITMASK
         
         AND     D2,D6                   * apply bitmask
         
         CMPI    #%0000010000000000,D6   * are we NEG?
-        BNE     NEXT19                  * not neg
+        BNE     NOTNEG                  * not neg
       
         * it is NEG, print
         LEA     NEGOP,A1
@@ -461,20 +462,18 @@ NEXT20 *NEG
         
         BRA     DONE * we found the op, move to next iteration
         
-NEXT19 *MOVEM
+NOTNEG *MOVEM
 
         * prep values for BITMASK subroutine
-        CLR     D6
-        CLR     D7
-        MOVE.W  #7,D6
-        MOVE.W  #9,D7
+        MOVE.L  #7,D6
+        MOVE.L  #9,D7
         
         BSR     BITMASK
         
         AND     D2,D6   * apply bitmask
         
         CMPI    #%0000000010000000,D6 * is it MOVEM?
-        BNE     NEXT18          * it is not MOVEM
+        BNE     NOTMOVEM          * it is not MOVEM
         
         * it is MOVEM
         LEA     MOVEMOP,A1
@@ -485,19 +484,17 @@ NEXT19 *MOVEM
         
         BRA     DONE          * we found and printed, move on to the next iteration
         
-NEXT18 *JSR
+NOTMOVEM *JSR
         * prep values for BITMASK subroutine
-        CLR     D6
-        CLR     D7
-        MOVE.W  #6,D6
-        MOVE.W  #8,D7
+        MOVE.L  #6,D6
+        MOVE.L  #8,D7
         
         BSR     BITMASK
         
         AND     D2,D6   * apply bitmask
         
         CMPI    #%0000000010000000,D6
-        BNE     NEXT17          * it's not JSR
+        BNE     NOTJSR          * it's not JSR
         
         LEA     JSROP,A1
         MOVE.B  #14,D0          * Print a newline and JSR
@@ -507,40 +504,36 @@ NEXT18 *JSR
         MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
         
         BRA     DONE          * we already found instruction, next iteration
-NEXT17 *RTS
+NOTJSR *RTS
 
         * prep values for BITMASK subroutine
-        CLR     D6
-        CLR     D7
-        MOVE.W  #6,D6
-        MOVE.W  #8,D7
+        MOVE.L  #6,D6
+        MOVE.L  #8,D7
         
         BSR     BITMASK
         
         AND     D2,D6   * apply bitmask
         
         CMPI    #%0000000001000000,D6
-        BNE     NEXT16          * it's not RTS
+        BNE     NOTRTS          * it's not RTS
         
         LEA     RTSOP,A1
         MOVE.B  #14,D0          * Print a newline and RTS
         TRAP    #15
                 
         BRA     DONE          * we already found instruction, next iteration
-NEXT16 *LEA
+NOTRTS  *LEA
        
         * prep values for BITMASK subroutine
-         CLR     D6
-        CLR     D7
-        MOVE.W  #6,D6
-        MOVE.W  #8,D7
+        MOVE.L  #6,D6
+        MOVE.L  #8,D7
         
         BSR     BITMASK
         
         AND     D2,D6   * apply bitmask
         
         CMPI    #%0000000111000000,D6
-        BNE     NEXT15          * it's not LEA, we dont know what it is
+        BNE     UNKNOWN          * it's not LEA, we dont know what it is
         
         LEA     LEAOP,A1
         MOVE.B  #14,D0          * Print a newline and LEA
@@ -550,7 +543,7 @@ NEXT16 *LEA
                 
         BRA     DONE          * we already found instruction, next iteration
         
-NEXT15 *dont know what it is
+UNKNOWN *dont know what it is
     
         * we don't know what it is, print it out
         MOVE.W  D2,D1           * Print opcode we don't recognize
@@ -779,6 +772,7 @@ END
     RTS
 RLLYEND
     END    START        ; last line of source
+
 
 
 
