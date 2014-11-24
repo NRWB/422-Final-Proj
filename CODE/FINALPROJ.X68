@@ -122,15 +122,172 @@ ITERATION
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
 OP0000
-        * Compare 8th bit
-        * If 8th bit is 1, go to BCLR
-            * If bit 7 = 1 and 6 = 0, it is confirmed BCLR
-                * Check if mode and both registers is right
-        * Now compare bits 9,10,11
-            * If they're 000, go to ORI
-                * Check if size, mode, and register is right
-            * If they're 110, go to CMPI
-                * Check if size, mode, and register is right
+        MOVEM   D0-D1/A0-A1,-(A7)   * Push values to the stack to save
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000110000000, D6  * Are we BCLR?
+        BNE     NOTBCLR                 * If not, branch to other OP0000 functions
+        
+        LEA     BCLROP,A1           * We found BCLR
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        BRA     NEXT17              * Found the op, move to next iteration
+
+NOTBCLR
+        MOVE.W  #9, D6              * Prep lower value for bitmask
+        MOVE.W  #11, D7             * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000000000000, D6  * Are we ORI?
+        BEQ     ISORI                   * If ORI, branch to ISORI
+        
+        CMPI    #%0000110000000000, D6  * Hmm... Maybe we're CMPI?
+        BEQ     ISCMPI                  * If CMPI, branch to ISCMPI
+        
+        BNE     UNKNOWNOP               * Otherwise, this op is an imposter. 
+                                        * We don't deal too kindly with imposters.
+        
+ISORI   * TODO
+        
+
+ISCMPI
+        LEA     CMPIOP, A1          * Load 'CMPI' into the output window
+        MOVE.B  #14,D0              * Trap #14 prints out the data in D0
+        TRAP    #15                 * Perform Trap #14
+        
+        * Determine the Size
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #7, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000011000000, D6  * Imposter Op
+        BEQ     UNKNOWNOP               * Deal with the imposter
+        
+        CMPI    #%0000000000000000, D6  * The size is a BYTE
+        BEQ     CMPIBYTE                * Branch to CMPI.B
+        
+        CMPI    #%0000000001000000, D6  * The size is a WORD
+        BEQ     CMPIWORD                * Branch to CMPI.W
+        
+        CMPI    #%0000000010000000, D6  * The size is a LONG
+        BEQ     CMPILONG                * Branch to CMPI.L
+        
+CMPIBYTE
+        LEA     __B, A1     * Load .B
+        MOVE.B  #14, D0     * Print out data
+        TRAP    #15         * Perform Trap #14
+        
+        LEA     IMD, A1     * Load #
+        MOVE.B  #14, D0     * Print out data
+        TRAP    #15         * Perform Trap #14
+        
+        MOVE.W  (A2)+,D3    * Advance a word forward to get the value.
+        MOVE.B  D3,D1       * Move the lower byte from D3 into D1
+        MOVE.W  -(A2),D3    * Now go back
+        MOVE.B  #14, D0     * Print out the data
+        TRAP    #15         * Perform Trap #14 
+        
+        BRA     CMPIEA      * Branch to determine Effective Address
+        
+CMPIWORD
+        LEA     __W, A1     * Load .W
+        MOVE.B  #14, D0     * Print out data
+        TRAP    #15         * Perform Trap #14
+        
+        LEA     IMD, A1     * Load #
+        MOVE.B  #14, D0     * Print out data
+        TRAP    #15         * Perform Trap #14
+        
+        MOVE.W  (A2)+,D3    * Advance a word forward to get the value.
+        MOVE.W  -(A2),D1    * Copy the immediate Value into D1, then go back
+        MOVE.B  #14, D0     * Print out the data
+        TRAP    #15         * Perform Trap #14
+        
+        
+        BRA     CMPIEA      * Branch to determine Effective Address
+        
+CMPILONG
+        LEA     __L, A1     * Load .L
+        MOVE.B  #14, D0     * Print out data
+        TRAP    #15         * Perform Trap #14
+        
+        LEA     IMD, A1     * Load #
+        MOVE.B  #14, D0     * Print out data
+        TRAP    #15         * Perform Trap #14
+        
+        MOVE.W  (A2)+,D3    * Advance a word forward to get the value.
+        MOVE.L  -(A2),D1    * Copy the immediate value (long) into D1, then go back
+        MOVE.B  #14, D0     * Print out the data
+        TRAP    #15         * Perform Trap #14
+        
+        BRA     CMPIEA      * Branch to determine Effective Address
+        
+CMPIEA
+        * So far the buffer is CMPI.X #Y ... Now we need to add a comma
+        LEA     COMMA, A1   * Load ,
+        MOVE.B  #14, D0     * Print out data
+        TRAP    #15         * Perform Trap #14
+        
+        LEA     __L, A1     * Load .L
+        MOVE.B  #14, D0     * Print out data
+        TRAP    #15         * Perform Trap #14
+        
+        * Determine the mode
+        MOVE.W  #3, D6              * Prep lower value for bitmask
+        MOVE.W  #5, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000000001000, D6  * Is the Mode 001, an unsupported mode for CMPI?
+        BEQ     UNKNOWNOP               * Imposter op
+        
+        CMPI    #%0000000000101000, D6  * Is the Mode 101, an unsupported mode?
+        BEQ     UNKNOWNOP               * Imposter op
+        
+        CMPI    #%0000000000110000, D6  * Is the Mode 110, an unsupported mode?
+        BEQ     UNKNOWNOP               * Imposter op
+
+        CMPI    #%0000000000111000, D6  * Is the Mode 111?
+        BEQ     CMPIREG                 * Further investigation is needed
+        
+        * Mode is valid at this point
+        CMPI    #%0000000000000000, D6  * AMode = Dn, Reg = Dn
+        BEQ     MODEDN
+
+        
+CMPIREG
+        MOVE.W  #0, D6              * Prep lower value for bitmask
+        MOVE.W  #2, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000000000000, D6  * Is the Register 000?
+        BEQ     CMPIREG000
+        
+        CMPI    #%0000000000000001, D6  * Is the Register 001?
+        BEQ     CMPIREG001
+          
+
+CMPIREG000  * TODO (xxx).W for CMPI
+
+CMPIREG001  * TODO (xxx).L for CMPI
+        
+        
+MODE_DN
+MODE_AN
+MODE_IAN
+MODE_IAN_POS
+MODE_IAN_PRE
+
+   
+UNKNOWNOP
+        
+
 
 
 * --- OP 0001 ------------------------------------------
@@ -390,7 +547,10 @@ MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
 MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
 NOOPERATION DC.B    'NOP',0
+BCLROP      DC.B    'BCLR',0
 NEGOP       DC.B    'NEG',0
+ORIOP       DC.B    'ORI',0
+CMPIOP      DC.B    'CMPI',0
 MOVEMOP     DC.B    'MOVEM',0
 
  * ----------------------------------------------------------------------------
@@ -400,10 +560,11 @@ MOVEMOP     DC.B    'MOVEM',0
  *   - A0-A7 (representing the 8 address registers)
  *   - D0-D7 (representing the 8 data registers)
  * ----------------------------------------------------------------------------
-
-__B        DC.B    'B'
-__W        DC.B    'W'
-__L        DC.B    'L'
+IMD        DC.B    '#'
+COMMA      DC.B    ','
+__B        DC.B    'B '
+__W        DC.B    'W '
+__L        DC.B    'L '
 
 __A0        DC.B   'A0'
 __A1        DC.B   'A1'    
@@ -440,6 +601,7 @@ __D7        DC.B   'D7'
 
 END
     END    START        ; last line of source
+
 
 
 
