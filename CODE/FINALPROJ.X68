@@ -96,23 +96,17 @@ LOOP
         
         CMP     #OP_0100,D6     * Does the operation start with 0100?
         BNE     NEXT            * No, check next case
-        BSR     OP0100          * Branch to subroutine 0100
-        BRA     ITERATION       * Move to next iteration of the loop
+        BRA     OP0100          * Branch to subroutine 0100
+        *BRA     ITERATION       * Move to next iteration of the loop
         
 NEXT
-        MOVE.W  D2,-(A7)
-        MOVE.W  D2,D1           * Print opcode we don't recognize
-        MOVE.B  #16,D2
-
-        MOVE.B  #16,D0           * Print out operation we don't recognize
-        TRAP    #15             * Perform Trap #3
-        MOVE.W  (A7)+,D2
+        BRA     UNKNOWNOP
         
 ITERATION
         MOVE    (A7)+,D6        * restore the bitmask to its previous state
 
-        MOVE.B  #14,D0          * Print a newline
-        TRAP    #15             * Perform Trap #14
+        *MOVE.B  #14,D0          * Print a newline
+        *TRAP    #15             * Perform Trap #14
 
         CMP     A2,D5           * Compare the starting address to ending address
         BEQ     END             * If they are equal, branch 
@@ -376,12 +370,6 @@ MODE_IAN
 MODE_IAN_POS
 MODE_IAN_PRE
 
-
-
-   
-UNKNOWNOP
-
-
 * --- OP 0001 ------------------------------------------
 * FUNCTIONS     MOVE.B
 * DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
@@ -438,7 +426,7 @@ OP0100  * TODO: lea, jsr, rts
         BNE     NOTNOP
         
         LEA     NOOPERATION,A1
-        MOVE.B  #14,D0          * Print a newline
+        MOVE.B  #13,D0          * Print a newline
         TRAP    #15
         
         BRA     DONE *we found it, move on to the next iteration
@@ -544,16 +532,12 @@ NOTRTS  *LEA
         BRA     DONE          * we already found instruction, next iteration
         
 UNKNOWN *dont know what it is
-    
-        * we don't know what it is, print it out
-        MOVE.W  D2,D1           * Print opcode we don't recognize
-
-        MOVE.B  #3,D0           * Print out operation we don't recognize
-        TRAP    #15             * Perform Trap #3
+        MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
+        BRA     UNKNOWNOP
         
 DONE
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
-        RTS
+        BRA     ITERATION
         
         
         
@@ -667,9 +651,37 @@ OP1110
 OP1111
 
 
-
-
-
+* --- UNKNOWNOP ----------------------------------------
+* PRE  COND     D2 contains the instruction we wish to print 
+* POST COND     D2 is no longer the opcode
+* ------------------------------------------------------
+   
+UNKNOWNOP
+        MOVE.L  A2,D1   * prep the add to print
+        
+        SUB.L   #2,D1   * off by two error due to post increment correct
+        
+        MOVE.L  D2,D3   * save the opcode to print
+        
+        MOVE.L  #16,D2  * set the base to 16
+        
+        MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
+        TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
+        
+        LEA     DATA,A1 * load " DATA $" into register A1
+        MOVE.L  #14,D0  * print the string stored in A1
+        TRAP    #15
+        
+        MOVE.L  D3,D1   * move the opcode from D3 into D1 to print
+        
+        MOVE.B  #15,D0   * Indicate we are using trap #15, 15 to in a certain #base
+        TRAP    #15      * Perform Trap #3
+        
+        LEA     NEWLINE,A1 * load newline into register A1
+        MOVE.L  #14,D0  * print the string stored in A1
+        TRAP    #15
+        
+        BRA     ITERATION * done with this op, move on to the next iteration
 
  * --- BITMASK ----------------------------------------------------------------
  *@pre      D6 contains the starting bit you want masked, D7 the ending bit
@@ -718,6 +730,7 @@ LEAOP       DC.B    'LEA',0
 BCLROP      DC.B    'BCLR',0
 ORIOP       DC.B    'ORI',0
 CMPIOP      DC.B    'CMPI',0
+DATA        DC.B    ' DATA $',0
 
  * ----------------------------------------------------------------------------
  * ----------------------------------------------------------------------------
@@ -772,6 +785,8 @@ END
     RTS
 RLLYEND
     END    START        ; last line of source
+
+
 
 
 
