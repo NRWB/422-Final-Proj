@@ -100,7 +100,7 @@ LOOP
         *BRA     ITERATION       * Move to next iteration of the loop
         
 NEXT
-        BRA     UNKNOWNOP
+        BSR     UNKNOWNOP
         
 ITERATION
         MOVE    (A7)+,D6        * restore the bitmask to its previous state
@@ -442,11 +442,15 @@ NOTNOP *NEG
         
         CMPI    #%0000010000000000,D6   * are we NEG?
         BNE     NOTNEG                  * not neg
+        
+        *check to make sure valid size and mode for movem
       
         * it is NEG, print
         LEA     NEGOP,A1
         MOVE.B  #14,D0
         TRAP    #15
+        
+        * call size and ea helpers
         
         BRA     DONE * we found the op, move to next iteration
         
@@ -463,10 +467,14 @@ NOTNEG *MOVEM
         CMPI    #%0000000010000000,D6 * is it MOVEM?
         BNE     NOTMOVEM          * it is not MOVEM
         
+        * make sure it is a valid size and mode for MOVEM
+        
         * it is MOVEM
         LEA     MOVEMOP,A1
         MOVE.B  #14,D0          * Print a newline
         TRAP    #15
+        
+        * probably needs its own special code for printing the rest due to uniqueness of movem
         
         MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
         
@@ -488,6 +496,8 @@ NOTMOVEM *JSR
         MOVE.B  #14,D0          * Print a newline and JSR
         TRAP    #15
         
+        * print out where we are jumping to
+        
         MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
         MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
         
@@ -508,7 +518,7 @@ NOTJSR *RTS
         LEA     RTSOP,A1
         MOVE.B  #14,D0          * Print a newline and RTS
         TRAP    #15
-                
+        
         BRA     DONE          * we already found instruction, next iteration
 NOTRTS  *LEA
        
@@ -523,17 +533,19 @@ NOTRTS  *LEA
         CMPI    #%0000000111000000,D6
         BNE     UNKNOWN          * it's not LEA, we dont know what it is
         
+        * check to make sure it is a supported mode and size
+        
         LEA     LEAOP,A1
-        MOVE.B  #14,D0          * Print a newline and LEA
+        MOVE.B  #14,D0          * Print LEA
         TRAP    #15
         
+        * call EA helper
         MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
                 
         BRA     DONE          * we already found instruction, next iteration
         
 UNKNOWN *dont know what it is
-        MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
-        BRA     UNKNOWNOP
+        BSR     UNKNOWNOP
         
 DONE
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
@@ -681,7 +693,8 @@ UNKNOWNOP
         MOVE.L  #14,D0  * print the string stored in A1
         TRAP    #15
         
-        BRA     ITERATION * done with this op, move on to the next iteration
+        RTS
+        *BRA     ITERATION * done with this op, move on to the next iteration
 
  * --- BITMASK ----------------------------------------------------------------
  *@pre      D6 contains the starting bit you want masked, D7 the ending bit
@@ -785,6 +798,7 @@ END
     RTS
 RLLYEND
     END    START        ; last line of source
+
 
 
 
