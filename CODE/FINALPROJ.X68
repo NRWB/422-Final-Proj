@@ -286,84 +286,6 @@ CMPIREG000  * TODO (xxx).W for CMPI
 
 CMPIREG001  * TODO (xxx).L for CMPI
         
-* --- Effective Address --------------------------------
-* PURPOSE       To generalize the EA part of the project.
-* PRE CON       The Mode must have been correctly identified. All Modes must be called by RTS
-* POST CON      After the EA, the entire op will head back to the BSR that called it.
-* ------------------------------------------------------        
-MODE_DN
-        MOVE.W  #0, D6              * Prep lower value for bitmask
-        MOVE.W  #2, D7              * Prep upper value for bitmask
-        BSR     BITMASK             * Finalize bitmask setup
-        AND     D2,D6               * Apply bitmask
-        
-        CMPI    #%000000000000000, D6   * Data Register D0?
-        BSR     PRINTD0
-        CMPI    #%000000000000001, D6   * Data Register D1?
-        BSR     PRINTD1
-        CMPI    #%000000000000010, D6   * Data Register D2?
-        BSR     PRINTD2
-        CMPI    #%000000000000011, D6   * Data Register D3?
-        BSR     PRINTD3
-        CMPI    #%000000000000100, D6   * Data Register D4?
-        BSR     PRINTD4
-        CMPI    #%000000000000101, D6   * Data Register D5?
-        BSR     PRINTD5
-        CMPI    #%000000000000110, D6   * Data Register D6?
-        BSR     PRINTD6
-        CMPI    #%000000000000111, D6   * Data Register D7?
-        BSR     PRINTD7
-        
-        RTS     * Return to function to handle pointer advancing, RTS to main, etc.
-
-PRINTD0
-        LEA     __D0, A1        * Load 'D0'
-        MOVE.B  #14, D0         * Load Trap #14 to print out
-        TRAP    #15             * Perform Trap #14
-        RTS
-        
-PRINTD1
-        LEA     __D1, A1        * Load 'D1'
-        MOVE.B  #14, D0         * Load Trap #14 to print out
-        TRAP    #15             * Perform Trap #14
-        RTS
-        
-PRINTD2
-        LEA     __D2, A1        * Load 'D2'
-        MOVE.B  #14, D0         * Load Trap #14 to print out
-        TRAP    #15             * Perform Trap #14
-        RTS
-        
-PRINTD3
-        LEA     __D3, A1        * Load 'D3'
-        MOVE.B  #14, D0         * Load Trap #14 to print out
-        TRAP    #15             * Perform Trap #14
-        RTS
-        
-PRINTD4
-        LEA     __D4, A1        * Load 'D4'
-        MOVE.B  #14, D0         * Load Trap #14 to print out
-        TRAP    #15             * Perform Trap #14
-        RTS
-        
-PRINTD5
-        LEA     __D5, A1        * Load 'D5'
-        MOVE.B  #14, D0         * Load Trap #14 to print out
-        TRAP    #15             * Perform Trap #14
-        RTS
-        
-PRINTD6
-        LEA     __D6, A1        * Load 'D6'
-        MOVE.B  #14, D0         * Load Trap #14 to print out
-        TRAP    #15             * Perform Trap #14
-        RTS
-        
-PRINTD7
-        LEA     __D7, A1        * Load 'D7'
-        MOVE.B  #14, D0         * Load Trap #14 to print out
-        TRAP    #15             * Perform Trap #14
-        RTS
-        
 MODE_AN
 
 MODE_IAN
@@ -443,14 +365,26 @@ NOTNOP *NEG
         CMPI    #%0000010000000000,D6   * are we NEG?
         BNE     NOTNEG                  * not neg
         
-        *check to make sure valid size and mode for movem
+        MOVE.L  #3,D6
+        MOVE.L  #5,D7
+        
+        BSR     BITMASK * generate a bitmask to be used to check mode
+        
+        CMPI    #%0000000000001000,D6 * check to see if it is the unsupported mode
+        BEQ     UNKNOWN * if it is, print print out as hex indicating bad op
       
         * it is NEG, print
         LEA     NEGOP,A1
         MOVE.B  #14,D0
         TRAP    #15
         
-        * call size and ea helpers
+        BSR     SIZE67
+        
+        LEA     SPACE,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BSR     EAHELPER05
         
         BRA     DONE * we found the op, move to next iteration
         
@@ -662,9 +596,254 @@ OP1110
 * ------------------------------------------------------
 OP1111
 
+* --- EAHELPER05 ----------------------------------------
+* PRE  COND     D2 contains the instruction we wish to 
+*               print the modes, registers for.
+*               Only call this helper for operations that only
+*               have one mode, register.
+* POST COND     Determines mode, passes D2 to REGHELPER to print
+* ------------------------------------------------------
+
+EAHELPER05
+    
+    MOVEM   D0-D7/A0-A1,-(A7) * save stuff
+    
+    MOVE.L  #3,D6
+    MOVE.L  #5,D7
+    
+    BSR     BITMASK * generate a bitmask to identify the mode
+    
+    AND     D2,D6   * mask off the parts of D2 we don't need
+    
+    CMPI    #%0000000000000000,D6 * is it data register direct?
+    BNE     NOTDATAREG
+    
+    MOVE.L  #0,D6
+    MOVE.L  #2,D7
+    
+    BSR     BITMASK * generate a bitmask to identify the mode
+    
+    AND     D2,D6   * mask off the parts of D2 we don't need
+    
+    BSR     MODE_DN
+    RTS
+    
+NOTDATAREG
+    RTS
+
+* --- Effective Address --------------------------------
+* PURPOSE       To generalize the EA part of the project.
+* PRE CON       The Mode must have been correctly identified. All Modes must be called by RTS
+* POST CON      After the EA, the entire op will head back to the BSR that called it.
+* ------------------------------------------------------        
+MODE_DN
+        MOVE.W  #0, D6              * Prep lower value for bitmask
+        MOVE.W  #2, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%000000000000000, D6   * Data Register D0?
+        BNE     NOTD0
+        
+        BSR     PRINTD0
+        RTS
+NOTD0      
+        CMPI    #%000000000000001, D6   * Data Register D1?
+        BNE     NOTD1
+        
+        BSR     PRINTD1
+        RTS
+NOTD1
+        CMPI    #%000000000000010, D6   * Data Register D2?
+        BNE     NOTD2
+        
+        BSR     PRINTD2
+        RTS
+NOTD2
+        CMPI    #%000000000000011, D6   * Data Register D3?
+        BNE     NOTD3
+        
+        BSR     PRINTD3
+        RTS
+NOTD3
+        CMPI    #%000000000000100, D6   * Data Register D4?
+        BNE     NOTD4
+        
+        BSR     PRINTD4
+        RTS
+NOTD4
+        CMPI    #%000000000000101, D6   * Data Register D5?
+        BNE     NOTD5
+        
+        BSR     PRINTD5
+        RTS
+NOTD5
+        CMPI    #%000000000000110, D6   * Data Register D6?
+        BNE     NOTD6
+        
+        BSR     PRINTD6
+        RTS
+NOTD6
+        BSR     PRINTD7
+        RTS
+
+
+
+*--- PRINTD0 ---------------------------------------
+*   Simply prints D0
+*---------------------------------------------------
+PRINTD0
+        LEA     __D0, A1        * Load 'D0'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
+*--- PRINTD1 ---------------------------------------
+*   Simply prints D1
+*---------------------------------------------------
+PRINTD1
+        LEA     __D1, A1        * Load 'D1'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+*--- PRINTD2 ---------------------------------------
+*   Simply prints D2
+*---------------------------------------------------        
+PRINTD2
+        LEA     __D2, A1        * Load 'D2'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+*--- PRINTD3 ---------------------------------------
+*   Simply prints D3
+*---------------------------------------------------       
+PRINTD3
+        LEA     __D3, A1        * Load 'D3'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+*--- PRINTD4 ---------------------------------------
+*   Simply prints D4
+*---------------------------------------------------        
+PRINTD4
+        LEA     __D4, A1        * Load 'D4'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+*--- PRINTD5 ---------------------------------------
+*   Simply prints D5
+*---------------------------------------------------        
+PRINTD5
+        LEA     __D5, A1        * Load 'D5'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+*--- PRINTD6 ---------------------------------------
+*   Simply prints D6
+*---------------------------------------------------        
+PRINTD6
+        LEA     __D6, A1        * Load 'D6'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+*--- PRINTD7 ---------------------------------------
+*   Simply prints D7
+*--------------------------------------------------- 
+PRINTD7
+        LEA     __D7, A1        * Load 'D7'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+*--- SIZE67 ---------------------------------------
+*   Called if the size is stored in bits 6->7
+*---------------------------------------------------
+        
+SIZE67  * If the size is stored in bits 6->7
+        MOVEM   D0-D7/A0-A6, -(A7)  * Save values to return to original when done
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #7, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask     
+
+        CMPI    #%0000000000000000, D6   * is it a BYTE?
+        BNE     NOT67BYTE
+        
+        BSR     PRINTBYTE               * Branch to handle BYTE sizes
+        BRA     END67
+NOT67BYTE        
+        CMPI    #%0000000001000000, D6   * is it a WORD?
+        BNE     NOT67WORD
+        
+        BSR     PRINTWORD               * Branch to handle WORD sizes
+        BRA     END67
+NOT67WORD
+        CMPI    #%0000000010000000, D6   * is it a LONG?
+        BNE     END67
+        
+        BSR     PRINTLONG               * Branch to handle LONG sizes
+END67
+        MOVEM   (A7)+,D0-D7/A0-A6       * Pop off the stack to return our registers
+        RTS                             * Return. Size handling is finished.
+
+* finish later, need to follow the same format as SIZE67        
+SIZE68  * If the size is stored in bits 6->8 
+        MOVEM   D0-D7/A0-A6, -(A7)  * Save values to return to original when done
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask          
+        
+        CMPI    #%0000000000000000, D6   * is it a BYTE?
+        BSR     PRINTBYTE               * Branch to handle BYTE sizes
+        CMPI    #%0000000100000000, D6   * is it a BYTE?
+        BSR     PRINTBYTE               * Branch to handle BYTE sizes 
+      
+        CMPI    #%0000000001000000, D6   * is it a WORD?
+        BSR     PRINTWORD               * Branch to handle BYTE sizes
+        CMPI    #%0000000101000000, D6   * is it a WORD?
+        BSR     PRINTWORD               * Branch to handle BYTE sizes
+        CMPI    #%0000000011000000, D6   * is it a WORD (ADDA)?
+        BSR     PRINTWORD               * Branch to handle BYTE sizes
+
+        CMPI    #%0000000010000000, D6   * is it a LONG?
+        BSR     PRINTLONG               * Branch to handle BYTE sizes
+        CMPI    #%0000000110000000, D6   * is it a LONG?
+        BSR     PRINTLONG               * Branch to handle BYTE sizes
+        CMPI    #%0000000111000000, D6   * is it a LONG (ADDA)?
+        BSR     PRINTLONG               * Branch to handle BYTE sizes
+
+        MOVEM   (A7)+,D0-D7/A0-A6       * Pop off the stack to return our registers
+        RTS                             * Return. Size handling is finished.              
+        
+PRINTBYTE
+        LEA     __B,A1      * Load '.B ' into A1
+        MOVE.B  #14,D0      * Trap #14 setup to print
+        TRAP    #15         * Perform Trap #14
+        RTS                 * Return to SIZE67/SIZE68
+        
+PRINTWORD
+        LEA     __W,A1      * Load '.W ' into A1
+        MOVE.B  #14,D0      * Trap #14 setup to print
+        TRAP    #15         * Perform Trap #14
+        RTS                 * Return to SIZE67/SIZE68
+
+PRINTLONG
+        LEA     __L,A1      * Load '.L ' into A1
+        MOVE.B  #14,D0      * Trap #14 setup to print
+        TRAP    #15         * Perform Trap #14
+        RTS                 * Return to SIZE67/SIZE68
 
 * --- UNKNOWNOP ----------------------------------------
-* PRE  COND     D2 contains the instruction we wish to print 
+* PRE  COND     D2 contains the instruction we wish to print.
+*               D2 has already been identified as an unknown operation
+* 
 * POST COND     D2 is no longer the opcode
 * ------------------------------------------------------
    
@@ -753,29 +932,30 @@ DATA        DC.B    ' DATA $',0
  *   - D0-D7 (representing the 8 data registers)
  * ----------------------------------------------------------------------------
 
-IMD        DC.B    '#'
-COMMA      DC.B    ','
-__B        DC.B    'B '
-__W        DC.B    'W '
-__L        DC.B    'L '
+SPACE      DC.B    ' ',0
+IMD        DC.B    '#',0
+COMMA      DC.B    ',',0
+__B        DC.B    '.B ',0
+__W        DC.B    '.W ',0
+__L        DC.B    '.L ',0
 
-__A0        DC.B   'A0'
-__A1        DC.B   'A1'    
-__A2        DC.B   'A2'
-__A3        DC.B   'A3'
-__A4        DC.B   'A4'
-__A5        DC.B   'A5'
-__A6        DC.B   'A6'
-__A7        DC.B   'A7'
+__A0        DC.B   'A0',0
+__A1        DC.B   'A1',0    
+__A2        DC.B   'A2',0
+__A3        DC.B   'A3',0
+__A4        DC.B   'A4',0
+__A5        DC.B   'A5',0
+__A6        DC.B   'A6',0
+__A7        DC.B   'A7',0
 
-__D0        DC.B   'D0'
-__D1        DC.B   'D1'
-__D2        DC.B   'D2'
-__D3        DC.B   'D3'
-__D4        DC.B   'D4'
-__D5        DC.B   'D5'
-__D6        DC.B   'D6'
-__D7        DC.B   'D7'
+__D0        DC.B   'D0',0
+__D1        DC.B   'D1',0
+__D2        DC.B   'D2',0
+__D3        DC.B   'D3',0
+__D4        DC.B   'D4',0
+__D5        DC.B   'D5',0
+__D6        DC.B   'D6',0
+__D7        DC.B   'D7',0
  * ---------------------------------------------------------------------------
  * End of definition segment
  * ---------------------------------------------------------------------------
@@ -798,6 +978,7 @@ END
     RTS
 RLLYEND
     END    START        ; last line of source
+
 
 
 
