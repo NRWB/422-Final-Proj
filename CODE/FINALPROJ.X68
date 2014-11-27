@@ -339,7 +339,7 @@ OP0011
 * ADDR REG        
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
-OP0100  * TODO: lea, jsr, rts
+OP0100  * TODO: lea, movem,
 
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
         
@@ -372,6 +372,12 @@ NOTNOP *NEG
         
         CMPI    #%0000000000001000,D6 * check to see if it is the unsupported mode
         BEQ     UNKNOWN * if it is, print print out as hex indicating bad op
+        
+        CMPI    #%0000000000101000,D6 * check to see if it is the unsupported mode
+        BEQ     UNKNOWN * if it is, print print out as hex indicating bad op
+        
+        CMPI    #%0000000000110000,D6 * check to see if it is the unsupported mode
+        BEQ     UNKNOWN * if it is, print print out as hex indicating bad op
       
         * it is NEG, print
         LEA     NEGOP,A1
@@ -380,11 +386,11 @@ NOTNOP *NEG
         
         BSR     SIZE67
         
-        LEA     SPACE,A1
+        BSR     EAHELPER05
+        
+        LEA     NEWLINE,A1
         MOVE.B  #14,D0
         TRAP    #15
-        
-        BSR     EAHELPER05
         
         BRA     DONE * we found the op, move to next iteration
         
@@ -405,7 +411,7 @@ NOTNEG *MOVEM
         
         * it is MOVEM
         LEA     MOVEMOP,A1
-        MOVE.B  #14,D0          * Print a newline
+        MOVE.B  #13,D0          * Print a newline
         TRAP    #15
         
         * probably needs its own special code for printing the rest due to uniqueness of movem
@@ -433,7 +439,26 @@ NOTMOVEM *JSR
         * print out where we are jumping to
         
         MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+        
+        MOVE.L  D2,D1   * save the opcode to print
+        
+        MOVE.L  #16,D2  * set the base to 16
+        
+        MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
+        TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
+        
         MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+        
+        MOVE.L  D2,D1   * save the opcode to print
+        
+        MOVE.L  #16,D2  * set the base to 16
+        
+        MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
+        TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
+        
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0          * Print a newline
+        TRAP    #15
         
         BRA     DONE          * we already found instruction, next iteration
 NOTJSR *RTS
@@ -450,7 +475,7 @@ NOTJSR *RTS
         BNE     NOTRTS          * it's not RTS
         
         LEA     RTSOP,A1
-        MOVE.B  #14,D0          * Print a newline and RTS
+        MOVE.B  #13,D0          * Print a newline and RTS
         TRAP    #15
         
         BRA     DONE          * we already found instruction, next iteration
@@ -470,7 +495,7 @@ NOTRTS  *LEA
         * check to make sure it is a supported mode and size
         
         LEA     LEAOP,A1
-        MOVE.B  #14,D0          * Print LEA
+        MOVE.B  #13,D0          * Print LEA
         TRAP    #15
         
         * call EA helper
@@ -626,6 +651,8 @@ EAHELPER05
     AND     D2,D6   * mask off the parts of D2 we don't need
     
     BSR     MODE_DN
+    
+    MOVEM   (A7)+,D0-D7/A0-A1 * restore stuff
     RTS
     
 NOTDATAREG
@@ -916,7 +943,7 @@ NEWLINE     DC.B    CR,LF,0
 NOOPERATION DC.B    'NOP',0
 NEGOP       DC.B    'NEG',0
 MOVEMOP     DC.B    'MOVEM',0
-JSROP       DC.B    'JSR',0
+JSROP       DC.B    'JSR ',0
 RTSOP       DC.B    'RTS',0
 LEAOP       DC.B    'LEA',0
 BCLROP      DC.B    'BCLR',0
@@ -978,6 +1005,8 @@ END
     RTS
 RLLYEND
     END    START        ; last line of source
+
+
 
 
 
