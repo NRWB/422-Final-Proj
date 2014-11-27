@@ -286,11 +286,7 @@ CMPIREG000  * TODO (xxx).W for CMPI
 
 CMPIREG001  * TODO (xxx).L for CMPI
         
-MODE_AN
 
-MODE_IAN
-MODE_IAN_POS
-MODE_IAN_PRE
 
 * --- OP 0001 ------------------------------------------
 * FUNCTIONS     MOVE.B
@@ -339,7 +335,7 @@ OP0011
 * ADDR REG        
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
-OP0100  * TODO: lea, movem,
+OP0100  * TODO: lea, movem, neg?
 
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
         
@@ -630,7 +626,7 @@ OP1111
 *               have one mode, register.
 * POST COND     Determines mode, passes D2 to REGHELPER to print
 * ------------------------------------------------------
-
+*todo: add code for printing immediate values
 EAHELPER05
     
     MOVEM   D0-D7/A0-A1,-(A7) * save stuff
@@ -642,23 +638,94 @@ EAHELPER05
     
     AND     D2,D6   * mask off the parts of D2 we don't need
     
+    MOVE.L  D6,D5   * store the 3-5 bitmask for later use
+    
     CMPI    #%0000000000000000,D6 * is it data register direct?
     BNE     NOTDATAREG
     
-    MOVE.L  #0,D6
-    MOVE.L  #2,D7
+    BSR     MODE_DN
+     
+    BRA     ENDEAHELPER05
     
-    BSR     BITMASK * generate a bitmask to identify the mode
+NOTDATAREG * address register direct
+
+    MOVE.L  D5,D6   * reload the bitmask into D6
     
     AND     D2,D6   * mask off the parts of D2 we don't need
     
-    BSR     MODE_DN
+    CMPI    #%0000000000001000,D6 * is it address register direct?
+    BNE     NOTADRDIRECT
     
+    BSR     MODE_AN
+     
+    BRA     ENDEAHELPER05
+    
+NOTADRDIRECT * address register indirect
+        
+    MOVE.L  D5,D6   * reload the bitmask into D6
+    
+    AND     D2,D6   * mask off the parts of D2 we don't need
+    
+    CMPI    #%0000000000010000,D6 * is it address register indirect?
+    BNE     NOTADRINDIRECT
+    
+    BSR     MODE_IAN
+     
+    BRA     ENDEAHELPER05
+    
+NOTADRINDIRECT * address register indirect, post increment
+            
+    MOVE.L  D5,D6   * reload the bitmask into D6
+    
+    AND     D2,D6   * mask off the parts of D2 we don't need
+    
+    CMPI    #%0000000000011000,D6 * is it address register indirect post increment?
+    BNE     NOTADRINDIRECTPOST
+    
+    BSR     MODE_IAN_POST
+     
+    BRA     ENDEAHELPER05
+    
+NOTADRINDIRECTPOST * address register indirect, pre decrement
+
+    MOVE.L  D5,D6   * reload the bitmask into D6
+    
+    AND     D2,D6   * mask off the parts of D2 we don't need
+    
+    CMPI    #%0000000000100000,D6 * is it address register indirect pre decrement?
+    BNE     NOTADRINDIRECTPRE
+    
+    BSR     MODE_IAN_PRE
+     
+    BRA     ENDEAHELPER05
+    
+NOTADRINDIRECTPRE * immediate
+    
+    MOVE.L  D5,D6   * reload the bitmask into D6
+    
+    AND     D2,D6   * mask off the parts of D2 we don't need
+    
+    CMPI    #%0000000000111000,D6 * is it immediate?
+    BNE     NOTIMMEDIATE
+    
+    * todo, stuff for printing immediate addresses
+    
+    BRA     ENDEAHELPER05
+    
+NOTIMMEDIATE * if none of the previous cases are true, it is a mode not supported by our decompiler
+
+    BSR     UNKNOWNOP
+    
+ENDEAHELPER05
     MOVEM   (A7)+,D0-D7/A0-A1 * restore stuff
     RTS
-    
-NOTDATAREG
-    RTS
+        
+
+MODE_AN
+
+MODE_IAN
+MODE_IAN_POS
+MODE_IAN_PRE
 
 * --- Effective Address --------------------------------
 * PURPOSE       To generalize the EA part of the project.
@@ -666,6 +733,8 @@ NOTDATAREG
 * POST CON      After the EA, the entire op will head back to the BSR that called it.
 * ------------------------------------------------------        
 MODE_DN
+        MOVEM   D0-D7/A0-A1,-(A7) * save stuff
+
         MOVE.W  #0, D6              * Prep lower value for bitmask
         MOVE.W  #2, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
@@ -675,47 +744,51 @@ MODE_DN
         BNE     NOTD0
         
         BSR     PRINTD0
-        RTS
+        BRA     ENDMODE_DN
 NOTD0      
         CMPI    #%000000000000001, D6   * Data Register D1?
         BNE     NOTD1
         
         BSR     PRINTD1
-        RTS
+        BRA     ENDMODE_DN
 NOTD1
         CMPI    #%000000000000010, D6   * Data Register D2?
         BNE     NOTD2
         
         BSR     PRINTD2
-        RTS
+        BRA     ENDMODE_DN
 NOTD2
         CMPI    #%000000000000011, D6   * Data Register D3?
         BNE     NOTD3
         
         BSR     PRINTD3
-        RTS
+        BRA     ENDMODE_DN
 NOTD3
         CMPI    #%000000000000100, D6   * Data Register D4?
         BNE     NOTD4
         
         BSR     PRINTD4
-        RTS
+        BRA     ENDMODE_DN
 NOTD4
         CMPI    #%000000000000101, D6   * Data Register D5?
         BNE     NOTD5
         
         BSR     PRINTD5
-        RTS
+        BRA     ENDMODE_DN
 NOTD5
         CMPI    #%000000000000110, D6   * Data Register D6?
         BNE     NOTD6
         
         BSR     PRINTD6
-        RTS
+        BRA     ENDMODE_DN
 NOTD6
         BSR     PRINTD7
+        BRA     ENDMODE_DN
+        
+ENDMODE_DN
+        
+        MOVEM   (A7)+,D0-D7/A0-A1 * restore stuff
         RTS
-
 
 
 *--- PRINTD0 ---------------------------------------
@@ -1036,6 +1109,7 @@ RLLYEND
 
 =======
 >>>>>>> origin/master
+
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
