@@ -520,6 +520,8 @@ DONE
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
 OP0101
+* testing branching
+* op op op
 
 
 
@@ -1030,7 +1032,10 @@ RLLYEND
 
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/master
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
