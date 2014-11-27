@@ -119,7 +119,7 @@ ITERATION
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
 OP0000
- MOVEM   D0-D1/A0-A1,-(A7)   * Push values to the stack to save
+        MOVEM   D0-D1/A0-A1,-(A7)   * Push values to the stack to save
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #8, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
@@ -719,19 +719,14 @@ NOTIMMEDIATE * if none of the previous cases are true, it is a mode not supporte
 ENDEAHELPER05
     MOVEM   (A7)+,D0-D7/A0-A1 * restore stuff
     RTS
-        
-
-MODE_AN
-
-MODE_IAN
-MODE_IAN_POS
-MODE_IAN_PRE
 
 * --- Effective Address --------------------------------
 * PURPOSE       To generalize the EA part of the project.
 * PRE CON       The Mode must have been correctly identified. All Modes must be called by RTS
 * POST CON      After the EA, the entire op will head back to the BSR that called it.
-* ------------------------------------------------------        
+* ------------------------------------------------------    
+
+* --- Dn ---------------------------------------------------------    
 MODE_DN
         MOVEM   D0-D7/A0-A1,-(A7) * save stuff
 
@@ -786,10 +781,8 @@ NOTD6
         BRA     ENDMODE_DN
         
 ENDMODE_DN
-        
         MOVEM   (A7)+,D0-D7/A0-A1 * restore stuff
         RTS
-
 
 *--- PRINTD0 ---------------------------------------
 *   Simply prints D0
@@ -863,6 +856,186 @@ PRINTD7
         TRAP    #15             * Perform Trap #14
         RTS
 
+* --- MODE_DN ----------------------------------------------------
+*   Address Register Direct
+* ----------------------------------------------------------------
+MODE_AN
+        MOVEM   D0-D7/A0-A1,-(A7)   * Save information
+
+        MOVE.W  #0, D6              * Prep lower value for bitmask
+        MOVE.W  #2, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%000000000000000, D6   * Data Register D0?
+        BNE     NOTA0                   * Branch to determine and print the register
+        
+        BSR     PRINTA0                 * Print out A0 
+        BRA     ENDMODE_AN              * Branch to restore section
+
+ENDMODE_DN
+        MOVEM   (A7)+,D0-D7/A0-A1   * Restore registers
+        RTS
+
+* --- MODE_IAN -----------------------------------------------
+*   Address Register Indirect
+* ------------------------------------------------------------
+MODE_IAN
+        MOVEM   D0-D7/A0-A1,-(A7)   * Save information
+
+        MOVE.W  #0, D6              * Prep lower value for bitmask
+        MOVE.W  #2, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        LEA     OBRACK, A1          * Load '('
+        MOVE.B  #14, D0             * Load Trap #14 to print out
+        TRAP    #15                 * Perform Trap #14
+        
+        CMPI    #%000000000000000, D6   * Address Register D0?
+        BNE     NOTA0                   * Branch to Not A0
+        
+        BSR     PRINTA0                 * Print out A0     
+
+        BRA     ENDMODE_IAN             * Branch to restore section
+        
+ENDMODE_IAN        
+        LEA     CBRACK, A1              * Load ')'
+        MOVE.B  #14, D0                 * Load Trap #14 to print out
+        TRAP    #15                     * Perform Trap #14 
+        MOVEM   (A7)+,D0-D7/A0-A1       * Restore registers
+        RTS                             * Return to main
+
+* --- MODE_IAN_POS -------------------------------------------
+*   Address Register Indirect with Post Incrementation
+* ------------------------------------------------------------
+MODE_IAN_POS
+        MOVEM   D0-D7/A0-A1,-(A7)   * Save information
+
+        MOVE.W  #0, D6              * Prep lower value for bitmask
+        MOVE.W  #2, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        LEA     OBRACK, A1          * Load '('
+        MOVE.B  #14, D0             * Load Trap #14 to print out
+        TRAP    #15                 * Perform Trap #14
+        
+        CMPI    #%000000000000000, D6   * Address Register A0?
+        BNE     NOTA0                   * Branch to Not A0
+        
+        BSR     PRINTA0                 * Print out A0     
+
+        BRA     ENDMODE_IAN_POS         * Branch to restore section
+
+ENDMODE_IAN_POS
+        LEA     CBRACK, A1              * Load ')'
+        MOVE.B  #14, D0                 * Load Trap #14 to print out
+        TRAP    #15                     * Perform Trap #14 
+        
+        LEA     PLUS, A1                * Load '+'
+        MOVE.B  #14, D0                 * Load Trap #14 to print out
+        TRAP    #15                     * Perform Trap #14 
+        
+        MOVEM   (A7)+,D0-D7/A0-A1       * Restore registers
+        RTS                             * Return to main
+        
+MODE_IAN_PRE
+
+* --- An -----------------------------------------------
+*   Determine the address register
+* ------------------------------------------------------------
+NOTA0      
+        CMPI    #%000000000000001, D6   * Address Register D1?
+        BNE     NOTA1
+        
+        BSR     PRINTA1
+        BRA     ENDMODE_AN              * NEED TO REVIEW LOGIC. WON'T WORK FOR OTHER MODE_IANS
+NOTA1
+        CMPI    #%000000000000010, D6   * Address Register D2?
+        BNE     NOTA2
+        
+        BSR     PRINTA2
+        BRA     ENDMODE_AN              * NEED TO REVIEW LOGIC. WON'T WORK FOR OTHER MODE_IANS
+NOTA2
+        CMPI    #%000000000000011, D6   * Address Register D3?
+        BNE     NOTA3
+        
+        BSR     PRINTA3
+        BRA     ENDMODE_AN              * NEED TO REVIEW LOGIC. WON'T WORK FOR OTHER MODE_IANS
+NOTA3
+        CMPI    #%000000000000100, D6   * Address Register D4?
+        BNE     NOTA4
+        
+        BSR     PRINTA4                 * NEED TO REVIEW LOGIC. WON'T WORK FOR OTHER MODE_IANS
+        BRA     ENDMODE_AN
+NOTA4
+        CMPI    #%000000000000101, D6   * Address Register D5?
+        BNE     NOTA5
+        
+        BSR     PRINTA5                 * NEED TO REVIEW LOGIC. WON'T WORK FOR OTHER MODE_IANS
+        BRA     ENDMODE_AN
+NOTA5
+        CMPI    #%000000000000110, D6   * Address Register D6?
+        BNE     NOTA6
+        
+        BSR     PRINTA6                 * NEED TO REVIEW LOGIC. WON'T WORK FOR OTHER MODE_IANS
+        BRA     ENDMODE_AN
+NOTA6                                   * Address Register D7
+        BSR     PRINTA7
+        BRA     ENDMODE_AN
+
+* --- Printing out Address Registers -------------------------
+*   Simply print out the address register
+* ------------------------------------------------------------
+PRINTA0
+        LEA     __A0, A1        * Load 'A0'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+PRINTA1
+        LEA     __A1, A1        * Load 'A1'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
+PRINTA2
+        LEA     __A2, A1        * Load 'A2'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+PRINTA3
+        LEA     __A3, A1        * Load 'A3'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+PRINTA4
+        LEA     __A4, A1        * Load 'A4'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+PRINTA5
+        LEA     __A5, A1        * Load 'A5'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+PRINTA6
+        LEA     __A6, A1        * Load 'A6'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+
+PRINTA7
+        LEA     __A7, A1        * Load 'A7'
+        MOVE.B  #14, D0         * Load Trap #14 to print out
+        TRAP    #15             * Perform Trap #14
+        RTS
+        
 *--- SIZE67 ---------------------------------------
 *   Called if the size is stored in bits 6->7
 *---------------------------------------------------
@@ -1034,12 +1207,16 @@ DATA        DC.B    ' DATA $',0
  *   - D0-D7 (representing the 8 data registers)
  * ----------------------------------------------------------------------------
 
-SPACE      DC.B    ' ',0
-IMD        DC.B    '#',0
-COMMA      DC.B    ',',0
-__B        DC.B    '.B ',0
-__W        DC.B    '.W ',0
-__L        DC.B    '.L ',0
+SPACE       DC.B    ' ',0
+IMD         DC.B    '#',0
+COMMA       DC.B    ',',0
+OBRACK      DC.B    '(',0
+CBRACK      DC.B    ')',0
+PLUS        DC.B    '+',0
+MINUS       DC.B    '-',0
+__B         DC.B    '.B ',0
+__W         DC.B    '.W ',0
+__L         DC.B    '.L ',0
 
 __A0        DC.B   'A0',0
 __A1        DC.B   'A1',0    
@@ -1109,6 +1286,7 @@ RLLYEND
 
 =======
 >>>>>>> origin/master
+
 
 *~Font name~Courier New~
 *~Font size~10~
