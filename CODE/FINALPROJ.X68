@@ -529,6 +529,34 @@ OP0101
 * ADDR REG        
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
+* --- OP 0110 ------------------------------------------
+* FUNCTIONS     BCC, BCS, BGE, BLT, BVC, BRA
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG      A1 - Printing
+* POST COND     All registers return to their previous state.
+* Description: Determine the opcode given 0110 from matching cases.
+*              Use additional word/long offset if specified to align memory evenly.
+*              Perform 2's compliment on label, then output result.
+*              - Conditions Table
+*                Condition Names  - Mnemonic - Condition Code
+*                --------------------------------------------
+*                True             -    T     - 0000
+*                False            -    F     - 0001
+*                Higher           -    HI    - 0010
+*                Lower or Same    -    LS    - 0011
+*                Carry Clear      -    CC    - 0100
+*                Carry Set        -    CS    - 0101
+*                Not Equal        -    NE    - 0110
+*                Equal            -    EQ    - 0111
+*                Overflow Clear   -    VC    - 1000
+*                Overflow Set     -    VS    - 1001
+*                Plus             -    PL    - 1010
+*                Minus            -    MI    - 1011
+*                Greater or Equal -    GE    - 1100
+*                Less Than        -    LT    - 1101
+*                Greater Than     -    GT    - 1110
+*                Less or Equal    -    LE    - 1111
+* ------------------------------------------------------
 OP0110
 
 
@@ -551,8 +579,114 @@ OP0111
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
 OP1000
+        MOVEM       D0-D1/A0-A1,-(A7) * Save main method routine vars to stack
+        
+        * Ready four bits to help distinguish op's with the 0110 prefix
+        MOVE.W  #0,D6                 * Move in 0 to D6 (first arg for the
+                                      * BITMASK sub-routine call)
+        MOVE.W  #7,D7                 * Move in 7 to D7 (second arg for the
+                                      * BITMASK sub-routine call)
+                                      
+        * The BITMASK call uses D6 as start bit, D7 as ending bit to mask
+        BSR     BITMASK               * Call BITMASK sub-routine
+                                      * Returns a bitmask in D6
+        
+        AND     D2,D6                 * And the index op, which was pre-loaded
+                                      * in the main memory loop with the bitmask
+                                      * to use to determine what case we need.
+        
+        * Analyze the 8-bit offset in the instruction for a value of $00 or $FF.
+        * $00 == word offset, $FF == long offset
+     ***CMPI    #%0000000000000000,D6
+     ***BEQ     BCC_WORD_OFFSET * or maybe flag a mark to grab when printing...?
+     ***
+     ***CMPI    #%0000000011111111,D6
+     ***BEQ     BCC_LONG_OFFSET * or maybe flag a mark to grab when printing...?
+        
+        * IF PASSED BOTH CMPI CHECKS (ABOVE),
+        * THEN THERE IS A 8-BIT OFFSET (NO EXTRA GRABS FROM MEMORY)
+        
+        MOVE.W  #9,D6  * Move in 9 to D6 (1st arg for the BITMASK sub-routine call)
+        MOVE.W  #11,D7 * Move in 11 to D7 (2nd arg for the BITMASK sub-routine call)
+                                      
+        * The BITMASK call uses D6 as start bit, D7 as ending bit to mask
+        BSR     BITMASK * Call BITMASK sub-routine, Returns a bitmask in D6
+        AND     D2,D6   * apply the BITMASK
+        
+        * CASE 1: BCC - BINARY FOR "CARRY CLEAR" FLAG
+        CMPI    #%0000010000000000,D6
+        BEQ     OP_BCC
+        
+        * CASE 2: BCS - BINARY FOR "CARRY SET" FLAG
+        CMPI    #%0000010100000000,D6
+        BEQ     OP_BCS
+        
+        * CASE 3: BGE - BINARY FOR "GREATER OR EQUAL" FLAG
+        CMPI    #%0000110000000000,D6
+        BEQ     OP_BGE
+        
+        * CASE 4: BLT - BINARY FOR "LESS THAN" FLAG
+        CMPI    #%0000110100000000,D6
+        BEQ     OP_BLT
+        
+        * CASE 5: BVC - BINARY FOR "OVERFLOW CLEAR" FLAG
+        CMPI    #%0000100000000000,D6
+        BEQ     OP_BVC
+        
+        * CASE 6: BRA - BINARY FOR "BRANCH ALWAYS" FLAG
+        * NOTE: A branch to the immediately following instruction automatically
+        *       uses the 16-bit displacement format because the 8-bit displacement
+        *       field contains $00 zero offset
+        * http://68k.hax.com/BRA
+        * NOTE2 ---> Does this mean, there should be no checks when debugging
+        *            for word/long offsets?
+        CMPI    #%0000000000000000,D6
+        BEQ     OP_BRA
+        
+        * CASE OTHER: ADDITIONAL FLAGS ALLOWED TO SIMPLY BE "RAW DATA OPS"
+        ; call raw data print out sub routine
 
+OP_BCC
+        LEA     OP_BCC_MSG,A1
+        BRA     OP_BRANCHES_PRINT
+OP_BCS
+        LEA     OP_BCS_MSG,A1
+        BRA     OP_BRANCHES_PRINT
+OP_BGE
+        LEA     OP_BGE_MSG,A1
+        BRA     OP_BRANCHES_PRINT
+OP_BLT
+        LEA     OP_BLT_MSG,A1
+        BRA     OP_BRANCHES_PRINT
+OP_BVC
+        LEA     OP_BVC_MSG,A1
+        BRA     OP_BRANCHES_PRINT
+OP_BRA
+        LEA     OP_BRA_MSG,A1
+        BRA     OP_BRANCHES_PRINT
 
+* NEED TO ADD CHECK FOR EATING ANOTHER WORD/LONG
+        * need to take an extra word/long offset, given $00 or $FF read from the 8-bit offset?
+        * assemble output to console
+OP_BRANCHES_PRINT
+        MOVE.B  #14,D0 * print instruction op
+        TRAP    #15
+        
+		LEA		DATA,A1
+		MOVE.B	#14,D0 * print raw data hex of the LABEL
+		TRAP	#15
+		
+        MOVE.B  (A2)+,D5 * move 8 bit label addr into d5 and advance main memory program pointer too
+        MOVE.L  D5,A4 * ready the 8bits into a4
+        LEA     (A4),A1 * ready the a4 into a1 for print
+        MOVE.B  #14,D0 * print the 8bit addr
+        TRAP    #15
+
+        BRA     BCC_END
+
+BCC_END * reload the memory, call RTS
+        MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
+        RTS
 
 * --- OP 1001 ------------------------------------------
 * FUNCTIONS     SUB
@@ -1162,6 +1296,12 @@ BCLROP      DC.B    'BCLR',0
 ORIOP       DC.B    'ORI',0
 CMPIOP      DC.B    'CMPI',0
 DATA        DC.B    ' DATA $',0
+OP_BCC_MSG  DC.B    'BCC',0
+OP_BCS_MSG  DC.B    'BCS',0
+OP_BGE_MSG  DC.B    'BGE',0
+OP_BLT_MSG  DC.B    'BLT',0
+OP_BVC_MSG  DC.B    'BVC',0
+OP_BRA_MSG  DC.B    'BRA',0
 
  * ----------------------------------------------------------------------------
  * ----------------------------------------------------------------------------
@@ -1222,41 +1362,3 @@ END
     RTS
 RLLYEND
     END    START        ; last line of source
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/master
-
-
-
-
-
-*~Font name~Courier New~
-*~Font size~10~
-*~Tab type~1~
-*~Tab size~4~
