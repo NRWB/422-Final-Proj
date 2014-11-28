@@ -297,9 +297,24 @@ CMPIREG001  * TODO (xxx).L for CMPI
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
 OP0001  
+        MOVEM   D0-D7/A0-A6, -(A7)  * Push vales onto stack
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
 
-
-
+        CMPI    #%0000000001000000, D6  * Is the destination mode 001?
+        BEQ     UNKNOWN                 * If so, it's unknown.
+        
+        LEA     MOVEOP,A1   * Put 'MOVE' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
+        
+        LEA     __B,A1      * Put '.B' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
+        
+        * TODO: DETERMINE THE MODE AND REG FOR DESTINATION AND SOURCE
 
 * --- OP 0010 ------------------------------------------
 * FUNCTIONS     MOVE.L, MOVEA.L,
@@ -1336,6 +1351,7 @@ MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
 NOOPERATION DC.B    'NOP',0
 NEGOP       DC.B    'NEG',0
+MOVEOP      DC.B    'MOVE',0
 MOVEMOP     DC.B    'MOVEM',0
 JSROP       DC.B    'JSR ',0
 RTSOP       DC.B    'RTS',0
@@ -1410,6 +1426,7 @@ END
     RTS
 RLLYEND
     END    START        ; last line of source
+
 
 *~Font name~Courier New~
 *~Font size~10~
