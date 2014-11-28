@@ -755,6 +755,55 @@ OP1110
 * ------------------------------------------------------
 OP1111
 
+
+
+* --- EAHELPER611 ----------------------------------------
+* PRE  COND     D2 contains the instruction we wish to 
+*               print the modes, registers for.
+* POST COND     Determines mode, passes D2 to EAHELPER05 to print
+* ------------------------------------------------------
+EAHELPER611
+    MOVEM  D0-D7/A0-A1,-(A7) * save stuff
+    
+    * to move the mode where EAHELPER50 can process it
+    MOVE.L  #6,D6   *prep registers to create bitmask
+    MOVE.L  #8,D7
+    
+    BSR     BITMASK * create bitmask
+    
+    AND     D2,D6   * apply bitmask
+    
+    CLR     D3      * prep D3 to store values
+    
+    MOVE.W  D6,D3   * store bitmasked value in D3
+    
+    LSL     #3,D3   * move bits 6-8 to 3-5
+    
+    * to move the register where EAHELPER50 can process it
+    MOVE.L  #9,D6   *prep registers to create bitmask
+    MOVE.L  #11,D7
+    
+    BSR     BITMASK * create bitmask
+    
+    AND     D2,D6   * apply bitmask
+    
+    CLR     D4      * prep D3 to store values
+    
+    MOVE.W  D6,D4   * store bitmasked value in D3
+    
+    LSL     #8,D4   * move bits 9-11 to 0-2
+    LSL     #1,D4   * move bits 9-11 to 0-2
+    
+    OR.L    D4,D3   * combind the register and mode
+    
+    MOVE.L  D3,D2   * put the result in D2 so EAHELPER05 can process it
+    
+    BSR     EAHELPER05
+    
+    MOVEM  (A7)+,D0-D7/A0-A1 * save stuff
+    
+    RTS
+    
 * --- EAHELPER05 ----------------------------------------
 * PRE  COND     D2 contains the instruction we wish to 
 *               print the modes, registers for.
