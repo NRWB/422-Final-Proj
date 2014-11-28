@@ -558,27 +558,6 @@ OP0101
 *                Less or Equal    -    LE    - 1111
 * ------------------------------------------------------
 OP0110
-
-
-
-
-* --- OP 0111 ------------------------------------------
-* FUNCTIONS     
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
-OP0111
-
-
-
-* --- OP 1000 ------------------------------------------
-* FUNCTIONS     DIVS, OR
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
-OP1000
         MOVEM       D0-D1/A0-A1,-(A7) * Save main method routine vars to stack
         
         * Ready four bits to help distinguish op's with the 0110 prefix
@@ -687,6 +666,26 @@ OP_BRANCHES_PRINT
 BCC_END * reload the memory, call RTS
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
         RTS
+        
+* --- OP 0111 ------------------------------------------
+* FUNCTIONS     
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
+OP0111
+
+
+
+* --- OP 1000 ------------------------------------------
+* FUNCTIONS     DIVS, OR
+* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
+* ADDR REG        
+* POST COND     All registers return to their previous state.
+* ------------------------------------------------------
+OP1000
+
+
 
 * --- OP 1001 ------------------------------------------
 * FUNCTIONS     SUB
@@ -1411,3 +1410,8 @@ END
     RTS
 RLLYEND
     END    START        ; last line of source
+
+*~Font name~Courier New~
+*~Font size~10~
+*~Tab type~1~
+*~Tab size~4~
