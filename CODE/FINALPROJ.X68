@@ -48,6 +48,7 @@ OP_1100     EQU     %1100000000000000
 OP_1101     EQU     %1101000000000000
 OP_1110     EQU     %1110000000000000
 OP_1111     EQU     %1111000000000000
+HEX_VALUE_MASK_LONG EQU     $0000000F  * mask a hex value in 32-bits
 
 * BITMASK     EQU     $F000       * used to bitmask the first nibble
 
@@ -1550,6 +1551,146 @@ UNKNOWNOP
 
 *-----------------------------------------------------------------------------
 *-----------------------------------------------------------------------------
+* NAME: Print ASCII hex char
+* DESCRIPTION:    Prints and addres register to console in hex (ASCII chars)
+* PRE-CONDITION:  A6 contains the register for memory to print.
+*                 This parameter would be pre-loaded by, for example:
+*                 "LEA FOO_BAR_ADDR,A6" or "LEA $1234FEED,A6"
+*                 D6 contains the loops to do (number of bytes).
+* POST-CONDITION: 
+* REGISTERS:      
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+PRINT_ASCII_HEX_CHAR
+    MOVEM.L     D0-D7/A0-A5,-(A7) * push data to save
+    CLR.L       D5
+    
+    * fence post check (if-statement, check if 0 > chars)
+    CMPI.B      #0,D6
+    BEQ         INVALID_ASCII_INPUT * go to very last part if invalid
+    
+*    MOVE.L      A6,D4
+    MOVE.L      A6,D7
+PRINT_ASCII_LOOP
+*    MOVE.L      A6,D7 * increase a6's pointer position ea. loop
+*    MOVE.L      D4,D7 * make a mutable copy
+    ROL.L       #4,D7 * roll to next spot
+    MOVEM.L     D7,-(A7) * save D7
+
+    ANDI.L      #HEX_VALUE_MASK_LONG,D7
+    
+    CMPI.L      #0,D7
+    BLT         INVALID_ASCII_INPUT
+
+    CMPI.L      #15,D7
+    BGT         INVALID_ASCII_INPUT
+
+    * this might be faster... to do later, after entire assignment done
+     * CMPI.L      #9,D7
+     * BLE         PRINT_ASCII_0_TO_9
+
+    CMPI.L      #0,D7
+    BEQ         PRINT_ASCII_0
+    CMPI.L      #1,D7
+    BEQ         PRINT_ASCII_1
+    CMPI.L      #2,D7
+    BEQ         PRINT_ASCII_2
+    CMPI.L      #3,D7
+    BEQ         PRINT_ASCII_3
+    CMPI.L      #4,D7
+    BEQ         PRINT_ASCII_4
+    CMPI.L      #5,D7
+    BEQ         PRINT_ASCII_5
+    CMPI.L      #6,D7
+    BEQ         PRINT_ASCII_6
+    CMPI.L      #7,D7
+    BEQ         PRINT_ASCII_7
+    CMPI.L      #8,D7
+    BEQ         PRINT_ASCII_8
+    CMPI.L      #9,D7
+    BEQ         PRINT_ASCII_9
+    CMPI.L      #10,D7
+    BEQ         PRINT_ASCII_A
+    CMPI.L      #11,D7
+    BEQ         PRINT_ASCII_B
+    CMPI.L      #12,D7
+    BEQ         PRINT_ASCII_C
+    CMPI.L      #13,D7
+    BEQ         PRINT_ASCII_D
+    CMPI.L      #14,D7
+    BEQ         PRINT_ASCII_E
+    CMPI.L      #15,D7
+    BEQ         PRINT_ASCII_F
+PRINT_ASCII_0
+    LEA         ASCII_0,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_1
+    LEA         ASCII_1,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_2
+    LEA         ASCII_2,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_3
+    LEA         ASCII_3,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_4
+    LEA         ASCII_4,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_5
+    LEA         ASCII_5,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_6
+    LEA         ASCII_6,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_7
+    LEA         ASCII_7,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_8
+    LEA         ASCII_8,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_9
+    LEA         ASCII_9,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_A
+    LEA         ASCII_A,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_B
+    LEA         ASCII_B,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_C
+    LEA         ASCII_C,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_D
+    LEA         ASCII_D,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_E
+    LEA         ASCII_E,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_F
+    LEA         ASCII_F,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_CHAR
+    MOVE.B      #14,D0
+    TRAP        #15
+    
+    ADD.B       #1,D5 * loop until counter stops
+    CMP.B       D6,D5
+    BGE         PRINT_ASCII_FINISH
+    
+    CLR.L       D7
+    MOVEM.L     (A7)+,D7 * copy back D7 from stack, to mutate its' bits
+    
+    BRA         PRINT_ASCII_LOOP
+INVALID_ASCII_INPUT
+PRINT_ASCII_FINISH
+    MOVEM.L     (A7)+,D0-D7/A0-A5 * pop saved memory
+    RTS
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
 * NAME: Bitmask
 * DESCRIPTION:    Masks bits in a data register.
 * PRE-CONDITION:  D6 contains the starting bit to be masked, and D7 contains
@@ -1607,6 +1748,23 @@ OP_BGE_MSG  DC.B    'BGE',0
 OP_BLT_MSG  DC.B    'BLT',0
 OP_BVC_MSG  DC.B    'BVC',0
 OP_BRA_MSG  DC.B    'BRA',0
+* ---> HEX CHARS
+ASCII_0     DC.B    '0',0
+ASCII_1     DC.B    '1',0
+ASCII_2     DC.B    '2',0
+ASCII_3     DC.B    '3',0
+ASCII_4     DC.B    '4',0
+ASCII_5     DC.B    '5',0
+ASCII_6     DC.B    '6',0
+ASCII_7     DC.B    '7',0
+ASCII_8     DC.B    '8',0
+ASCII_9     DC.B    '9',0
+ASCII_A     DC.B    'A',0
+ASCII_B     DC.B    'B',0
+ASCII_C     DC.B    'C',0
+ASCII_D     DC.B    'D',0
+ASCII_E     DC.B    'E',0
+ASCII_F     DC.B    'F',0
 * ---> SPECIAL CHARACTERS
 SPACE       DC.B    ' ',0
 DOLLAR      DC.B    '$',0
@@ -1665,6 +1823,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 *~Font name~Courier New~
