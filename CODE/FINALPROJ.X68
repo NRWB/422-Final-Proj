@@ -94,10 +94,15 @@ LOOP
         MOVE.W  (A2)+,D2        * Read an operation into D1
         AND.W   D2,D6           * Apply this bitmask
         
+        CMP     #OP_0001,D6     * Does the operation start with 0001?
+        BNE     NOT0001            * No, check next case
+        BSR     OP0001          * Branch to subroutine 0001
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT0001       
         CMP     #OP_0100,D6     * Does the operation start with 0100?
         BNE     NEXT            * No, check next case
-        BRA     OP0100          * Branch to subroutine 0100
-        *BRA     ITERATION       * Move to next iteration of the loop
+        BSR     OP0100          * Branch to subroutine 0100
+        BRA     ITERATION       * Move to next iteration of the loop
         
 NEXT
         BSR     UNKNOWNOP
@@ -131,7 +136,7 @@ OP0000
         LEA     BCLROP,A1           * We found BCLR
         MOVE.B  #14,D0              * Trap #14 prints out the data
         TRAP    #15                 * Perform Trap #14
-        BRA     DONE              * Found the op, move to next iteration
+        BRA     END0000              * Found the op, move to next iteration
 
 NOTBCLR * Possible options left are ORI or CMPI
         MOVE.W  #9, D6              * Prep lower value for bitmask
@@ -282,8 +287,10 @@ CMPIREG
         
         CMPI    #%0000000000000001, D6  * Is the Register 001?
         BEQ     CMPIREG001
-          
+END0000          
 
+       MOVEM   (A7)+,D0-D1/A0-A1   * Push values to the stack to save
+       RTS
 CMPIREG000  * TODO (xxx).W for CMPI
 
 CMPIREG001  * TODO (xxx).L for CMPI
@@ -297,22 +304,46 @@ CMPIREG001  * TODO (xxx).L for CMPI
 * POST COND     All registers return to their previous state.
 * ------------------------------------------------------
 OP0001  
-        MOVEM   D0-D7/A0-A6, -(A7)  * Push vales onto stack
+        MOVEM   D0-D7/A0-A1,-(A7)  * Push vales onto stack
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #8, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
         AND     D2,D6               * Apply bitmask
-
-        CMPI    #%0000000001000000, D6  * Is the destination mode 001?
-        BEQ     UNKNOWN                 * If so, it's unknown.
+        
+        * I may have fucked off this part, sorry - Caleb
+        * CMPI    #%0000000001000000, D6  * Is the destination mode 001?
+        * BNE     UNKNOWNOP0001                 * If so, it's unknown.
         
         LEA     MOVEOP,A1   * Put 'MOVE' into the window
         MOVE.B  #14,D0      * Trap #14 to print out
         TRAP    #15         * Perform Trap #14
         
-        LEA     __B,A1      * Put '.B' into the window
-        MOVE.B  #14,D0      * Trap #14 to print out
-        TRAP    #15         * Perform Trap #14
+        BSR     SIZE67
+        BSR     EAHELPER05
+        
+        LEA     COMMA,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BSR     EAHELPER611
+        
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BRA     ENDOP0001
+        *LEA     __B,A1      * Put '.B' into the window
+        *MOVE.B  #14,D0      * Trap #14 to print out
+        *TRAP    #15         * Perform Trap #14
+        
+UNKNOWNOP0001
+
+        BSR     UNKNOWNOP
+        
+ENDOP0001
+
+        MOVEM (A7)+,D0-D7/A0-A1
+        RTS        
         
         * TODO: DETERMINE THE MODE AND REG FOR DESTINATION AND SOURCE
 
@@ -521,7 +552,7 @@ UNKNOWN *dont know what it is
         
 DONE
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
-        BRA     ITERATION
+        RTS
         
         
         
@@ -791,7 +822,7 @@ EAHELPER611
     
     MOVE.W  D6,D3   * store bitmasked value in D3
     
-    LSL     #3,D3   * move bits 6-8 to 3-5
+    LSR     #3,D3   * move bits 6-8 to 3-5
     
     * to move the register where EAHELPER50 can process it
     MOVE.L  #9,D6   *prep registers to create bitmask
@@ -805,8 +836,8 @@ EAHELPER611
     
     MOVE.W  D6,D4   * store bitmasked value in D3
     
-    LSL     #8,D4   * move bits 9-11 to 0-2
-    LSL     #1,D4   * move bits 9-11 to 0-2
+    LSR     #8,D4   * move bits 9-11 to 0-2
+    LSR     #1,D4   * move bits 9-11 to 0-2
     
     OR.L    D4,D3   * combind the register and mode
     
@@ -847,10 +878,6 @@ EAHELPER05
     BRA     ENDEAHELPER05
     
 NOTDATAREG * address register direct
-
-    MOVE.L  D5,D6   * reload the bitmask into D6
-    
-    AND     D2,D6   * mask off the parts of D2 we don't need
     
     CMPI    #%0000000000001000,D6 * is it address register direct?
     BNE     NOTADRDIRECT
@@ -861,10 +888,6 @@ NOTDATAREG * address register direct
     
 NOTADRDIRECT * address register indirect
         
-    MOVE.L  D5,D6   * reload the bitmask into D6
-    
-    AND     D2,D6   * mask off the parts of D2 we don't need
-    
     CMPI    #%0000000000010000,D6 * is it address register indirect?
     BNE     NOTADRINDIRECT
     
@@ -882,10 +905,6 @@ NOTADRDIRECT * address register indirect
     BRA     ENDEAHELPER05
     
 NOTADRINDIRECT * address register indirect, post increment
-            
-    MOVE.L  D5,D6   * reload the bitmask into D6
-    
-    AND     D2,D6   * mask off the parts of D2 we don't need
     
     CMPI    #%0000000000011000,D6 * is it address register indirect post increment?
     BNE     NOTADRINDIRECTPOST
@@ -908,10 +927,6 @@ NOTADRINDIRECT * address register indirect, post increment
     BRA     ENDEAHELPER05
     
 NOTADRINDIRECTPOST * address register indirect, pre decrement
-
-    MOVE.L  D5,D6   * reload the bitmask into D6
-    
-    AND     D2,D6   * mask off the parts of D2 we don't need
     
     CMPI    #%0000000000100000,D6 * is it address register indirect pre decrement?
     BNE     NOTADRINDIRECTPRE
@@ -935,10 +950,6 @@ NOTADRINDIRECTPOST * address register indirect, pre decrement
     
 NOTADRINDIRECTPRE * immediate
     
-    MOVE.L  D5,D6   * reload the bitmask into D6
-    
-    AND     D2,D6   * mask off the parts of D2 we don't need
-    
     CMPI    #%0000000000111000,D6 * is it immediate?
     BNE     NOTIMMEDIATE
 
@@ -959,8 +970,6 @@ NOTADRINDIRECTPRE * immediate
         
     MOVE.B  #15,D0   * Indicate we are using trap #15, 15 to in a certain #base
     TRAP    #15      * Perform Trap #3
-
-    MOVE.W  D3,D2
     
     BRA     ENDEAHELPER05
     
@@ -1426,6 +1435,8 @@ END
     RTS
 RLLYEND
     END    START        ; last line of source
+
+
 
 
 *~Font name~Courier New~
