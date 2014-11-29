@@ -48,6 +48,7 @@ OP_1100     EQU     %1100000000000000
 OP_1101     EQU     %1101000000000000
 OP_1110     EQU     %1110000000000000
 OP_1111     EQU     %1111000000000000
+HEX_VALUE_MASK_LONG EQU     $0000000F  * mask a hex value in 32-bits
 
 * BITMASK     EQU     $F000       * used to bitmask the first nibble
 
@@ -56,6 +57,14 @@ START:  ORG    $1000            * first instruction of program
 * -----------------------------------
 * Starting and Ending Addresses
 * -----------------------------------
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: x
+* DESCRIPTION:    a
+* PRE-CONDITION:  b
+* POST-CONDITION: c
+* REGISTERS:      d
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 
 * THINK ABOUT ASKING FOR VALID START/END NO NEGATIVE ADDR
 
@@ -116,13 +125,21 @@ ITERATION
         CMP     A2,D5           * Compare the starting address to ending address
         BEQ     END             * If they are equal, branch 
         BRA     LOOP            * Otherwise, branch back to LOOP
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
-* --- OP 0000 ------------------------------------------
-* FUNCTIONS     BCLR, ORI, CMPI
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask. 
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_0000   (BCLR, ORI, CMPI)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0000
         MOVEM   D0-D1/A0-A1,-(A7)   * Push values to the stack to save
         MOVE.W  #6, D6              * Prep lower value for bitmask
@@ -294,15 +311,21 @@ END0000
 CMPIREG000  * TODO (xxx).W for CMPI
 
 CMPIREG001  * TODO (xxx).L for CMPI
-        
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
-* --- OP 0001 ------------------------------------------
-* FUNCTIONS     MOVE.B
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_0001   (MOVE.B)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0001  
         MOVEM   D0-D7/A0-A1,-(A7)  * Push vales onto stack
         MOVE.W  #6, D6              * Prep lower value for bitmask
@@ -346,22 +369,38 @@ ENDOP0001
         RTS        
         
         * TODO: DETERMINE THE MODE AND REG FOR DESTINATION AND SOURCE
-
-* --- OP 0010 ------------------------------------------
-* FUNCTIONS     MOVE.L, MOVEA.L,
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
-OP0010  
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
-* --- OP 0011 ------------------------------------------
-* FUNCTIONS     MOVE.W, MOVEA.W
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_0010   (MOVE.L, MOVEA.L)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+OP0010
+
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_0011   (MOVE.W, MOVEA.W)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0011
     MOVEM   D0-D7/A0-A6, -(A7)
     
@@ -375,15 +414,23 @@ OP0011
     CMP     #%0000000001000000,D6
     *BNE     NEXT15
     BSR     * for MOVEA.W
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
-* --- OP 0100 ------------------------------------------
-* FUNCTIONS     NO_OP, MOVEM, LEA, NEG, JSR, RTS
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
-OP0100  * TODO: lea, movem, neg?
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_0100   (NOP, MOVEM, LEA, NEG, JSR, RTS)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+OP0100  
+        * TODO: lea, movem, neg?
 
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
         
@@ -552,38 +599,56 @@ UNKNOWN *dont know what it is
         
 DONE
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
+<<<<<<< HEAD
         RTS
         
+=======
+        BRA     ITERATION
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------        
+>>>>>>> origin/master
         
         
 
-* --- OP 0101 ------------------------------------------
-* FUNCTIONS     SUBQ
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_0101   (SUBQ)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0101
+
 * testing branching
 * op op op
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
 
-* --- OP 0110 ------------------------------------------
-* FUNCTIONS     BCC, BCS, BGE, BLT, BVC, BRA
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
-* --- OP 0110 ------------------------------------------
-* FUNCTIONS     BCC, BCS, BGE, BLT, BVC, BRA
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG      A1 - Printing
-* POST COND     All registers return to their previous state.
-* Description: Determine the opcode given 0110 from matching cases.
-*              Use additional word/long offset if specified to align memory evenly.
-*              Perform 2's compliment on label, then output result.
-*              - Conditions Table
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_0110   (BCC, BCS, BGE, BLT, BVC, BRA)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  Given the possibilties for 0110, masks the next 4 bits
+*                 in the instruction and determines what the bits match to a
+*                 given condition code. If the 8 bit offset is $00, or $FF,
+*                 this signifies a word or long offset (for $00 and $FF
+*                 respectively). The 8 bit offset is in 2's comp. form, and
+*                 should be un-done, then plus or minus to the current
+*                 program counter (PC) to get the actual memory label to
+*                 output to console. The word offset signal eats an
+*                 additional 16 bits and the long offset eats an additional
+*                 32 bits. The word/long offset are for memory alignment.
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*                 A1 (output)
+* CONDITIONS TABLE:
 *                Condition Names  - Mnemonic - Condition Code
 *                --------------------------------------------
 *                True             -    T     - 0000
@@ -602,7 +667,7 @@ OP0101
 *                Less Than        -    LT    - 1101
 *                Greater Than     -    GT    - 1110
 *                Less or Equal    -    LE    - 1111
-* ------------------------------------------------------
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0110
         MOVEM       D0-D1/A0-A1,-(A7) * Save main method routine vars to stack
         
@@ -712,101 +777,166 @@ OP_BRANCHES_PRINT
 BCC_END * reload the memory, call RTS
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
         RTS
-        
-* --- OP 0111 ------------------------------------------
-* FUNCTIONS     
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_0111   ()
+* DESCRIPTION:    a
+* PRE-CONDITION:  b
+* POST-CONDITION: c
+* REGISTERS:      d
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0111
 
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
-* --- OP 1000 ------------------------------------------
-* FUNCTIONS     DIVS, OR
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_1000   (DIVS, OR)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1000
 
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
-* --- OP 1001 ------------------------------------------
-* FUNCTIONS     SUB
-* DATA REG      D0, D1 for output. D2 for entire instruction. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_1001   (SUB)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1001
 
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
-* --- OP 1010 ------------------------------------------
-* FUNCTIONS     
-* DATA REG      D0, D1 for output. D2 for entire instruction. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_1010   ()
+* DESCRIPTION:    a
+* PRE-CONDITION:  b
+* POST-CONDITION: c
+* REGISTERS:      d
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1010
 
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
-* --- OP 1011 ------------------------------------------
-* FUNCTIONS     EOR, CMP 
-* DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_1011   (EOR, CMP)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1011
 
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
-* --- OP 1100 ------------------------------------------
-* FUNCTIONS     MULS
-* DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_1100   (MULS)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1100
 
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
-* --- OP 1101 ------------------------------------------
-* FUNCTIONS     ADD, ADDA,
-* DATA REG      D0, D1 for output. D2 for entire opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_1101   (ADD, ADDA)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1101
 
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
-* --- OP 1110 ------------------------------------------
-* FUNCTIONS     LSL, LSR, ASL, ASR, ROL, ROR, 
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_1110   (LSL, LSR, ASL, ASR, ROL, ROR)
+* DESCRIPTION:    Determines the instruction by using bit-level logic.
+* PRE-CONDITION:  xyz
+* POST-CONDITION: All registers return to their previous state, and the output
+*                 goes to the output console for reading the raw data or the
+*                 actual instruction.
+* REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1110
 
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
 
-* --- OP 1111 ------------------------------------------
-* FUNCTIONS     
-* DATA REG      D0, D1 for output. D2 for opcode. D6 for bitmask.
-* ADDR REG        
-* POST COND     All registers return to their previous state.
-* ------------------------------------------------------
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: OP_1111   ()
+* DESCRIPTION:    a
+* PRE-CONDITION:  b
+* POST-CONDITION: c
+* REGISTERS:      d
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1111
 
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
-* --- EAHELPER611 ----------------------------------------
-* PRE  COND     D2 contains the instruction we wish to 
-*               print the modes, registers for.
-* POST COND     Determines mode, passes D2 to EAHELPER05 to print
-* ------------------------------------------------------
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           EAHELPER611
+* DESCRIPTION:    a
+* PRE-CONDITION:  D2 contains the instruction to print modes for.
+* POST-CONDITION: Determines mode, passes D2 to EAHELPER05 to print.
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 EAHELPER611
     MOVEM  D0-D7/A0-A1,-(A7) * save stuff
     
@@ -848,16 +978,23 @@ EAHELPER611
     MOVEM  (A7)+,D0-D7/A0-A1 * save stuff
     
     RTS
-    
-* --- EAHELPER05 ----------------------------------------
-* PRE  COND     D2 contains the instruction we wish to 
-*               print the modes, registers for.
-*               Only call this helper for operations that only
-*               have one mode, register.
-* POST COND     Determines mode, passes D2 to REGHELPER to print
-* ------------------------------------------------------
-*todo: add code for printing immediate values
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           EAHELPER05
+* DESCRIPTION:    a
+* PRE-CONDITION:  D2 contains the instruction to print modes for. Only call
+*                 this sub-routine helper for operations that only have one
+*                 mode register.
+* POST-CONDITION: Determines mode, passes D2 to REGHELPER to print.
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 EAHELPER05
+    * todo: add code for printing immediate values
     
     MOVEM   D0-D7/A0-A1,-(A7) * save stuff
     
@@ -980,14 +1117,22 @@ NOTIMMEDIATE * if none of the previous cases are true, it is a mode not supporte
 ENDEAHELPER05
     MOVEM   (A7)+,D0-D7/A0-A1 * restore stuff
     RTS
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
-* --- Effective Address --------------------------------
-* PURPOSE       To generalize the EA part of the project.
-* PRE CON       The Mode must have been correctly identified. All Modes must be called by RTS
-* POST CON      After the EA, the entire op will head back to the BSR that called it.
-* ------------------------------------------------------    
 
-* --- Dn ---------------------------------------------------------    
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           MODE_DN
+* DESCRIPTION:    Generalize the EA part of the project.
+* PRE-CONDITION:  The mode must have been correctly identified. All modes
+*                 must be called by RTS.
+* POST-CONDITION: After the EA, the entire op will head back to the BSR that
+*                 called it.
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+* ---> Dn
 MODE_DN
         MOVEM   D0-D7/A0-A1,-(A7) * save stuff
 
@@ -1044,10 +1189,19 @@ NOTD6
 ENDMODE_DN
         MOVEM   (A7)+,D0-D7/A0-A1 * restore stuff
         RTS
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
-*--- PRINTD0 ---------------------------------------
-*   Simply prints D0|D1...|D7
-*---------------------------------------------------
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           PRINTD0
+* DESCRIPTION:    Simply prints D0, D1, ..., up to D7.
+* PRE-CONDITION:  a
+* POST-CONDITION: a
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 PRINTD0
         LEA     __D0, A1        * Load 'D0'
         MOVE.B  #14, D0         * Load Trap #14 to print out
@@ -1088,10 +1242,19 @@ PRINTD7
         MOVE.B  #14, D0         * Load Trap #14 to print out
         TRAP    #15             * Perform Trap #14
         RTS
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
-* --- MODE_AN ----------------------------------------------------
-*   Simply chooses to print A0-A7
-* ----------------------------------------------------------------
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           MODE_AN
+* DESCRIPTION:    Simply chooses to print A0-A7.
+* PRE-CONDITION:  a
+* POST-CONDITION: a
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 MODE_AN
         MOVEM   D0-D7/A0-A1,-(A7)   * Save information
 
@@ -1155,10 +1318,19 @@ NOTA6
 ENDMODE_AN
         MOVEM   (A7)+,D0-D7/A0-A1   * Restore registers
         RTS
-        
-* --- Printing out Address Registers -------------------------
-*   Simply print out the address register
-* ------------------------------------------------------------
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           PRINTA0
+* DESCRIPTION:    Simply print out the address register.
+* PRE-CONDITION:  a
+* POST-CONDITION: a
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 PRINTA0
         LEA     __A0, A1        * Load 'A0'
         MOVE.B  #14, D0         * Load Trap #14 to print out
@@ -1206,11 +1378,20 @@ PRINTA7
         MOVE.B  #14, D0         * Load Trap #14 to print out
         TRAP    #15             * Perform Trap #14
         RTS
-*--- SIZE67 ---------------------------------------
-*   Called if the size is stored in bits 6->7
-*---------------------------------------------------
-        
-SIZE67  * If the size is stored in bits 6->7
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           SIZE67
+* DESCRIPTION:    Called if the size is stored in bits 6 to 7.
+* PRE-CONDITION:  a
+* POST-CONDITION: a
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+SIZE67
         MOVEM   D0-D7/A0-A6, -(A7)  * Save values to return to original when done
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #7, D7              * Prep upper value for bitmask
@@ -1236,9 +1417,23 @@ NOT67WORD
 END67
         MOVEM   (A7)+,D0-D7/A0-A6       * Pop off the stack to return our registers
         RTS                             * Return. Size handling is finished.
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
-* finish later, need to follow the same format as SIZE67        
-SIZE68  * If the size is stored in bits 6->8 
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           SIZE68
+* DESCRIPTION:    Called if the size is stored in bits 6 to 8.
+* PRE-CONDITION:  a
+* POST-CONDITION: a
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+SIZE68
+        * finish later, need to follow the same format as SIZE67
+        
+        
         MOVEM   D0-D7/A0-A6, -(A7)  * Save values to return to original when done
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #8, D7              * Prep upper value for bitmask
@@ -1265,33 +1460,78 @@ SIZE68  * If the size is stored in bits 6->8
         BSR     PRINTLONG               * Branch to handle BYTE sizes
 
         MOVEM   (A7)+,D0-D7/A0-A6       * Pop off the stack to return our registers
-        RTS                             * Return. Size handling is finished.              
-        
+        RTS                             * Return. Size handling is finished.
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           PRINTBYTE
+* DESCRIPTION:    a
+* PRE-CONDITION:  a
+* POST-CONDITION: a
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 PRINTBYTE
         LEA     __B,A1      * Load '.B ' into A1
         MOVE.B  #14,D0      * Trap #14 setup to print
         TRAP    #15         * Perform Trap #14
         RTS                 * Return to SIZE67/SIZE68
         
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           PRINTWORD
+* DESCRIPTION:    a
+* PRE-CONDITION:  a
+* POST-CONDITION: a
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 PRINTWORD
         LEA     __W,A1      * Load '.W ' into A1
         MOVE.B  #14,D0      * Trap #14 setup to print
         TRAP    #15         * Perform Trap #14
         RTS                 * Return to SIZE67/SIZE68
+        
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           PRINTLONG
+* DESCRIPTION:    a
+* PRE-CONDITION:  a
+* POST-CONDITION: a
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 PRINTLONG
         LEA     __L,A1      * Load '.L ' into A1
         MOVE.B  #14,D0      * Trap #14 setup to print
         TRAP    #15         * Perform Trap #14
         RTS                 * Return to SIZE67/SIZE68
+        
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
-* --- UNKNOWNOP ----------------------------------------
-* PRE  COND     D2 contains the instruction we wish to print.
-*               D2 has already been identified as an unknown operation
-* 
-* POST COND     D2 is no longer the opcode
-* ------------------------------------------------------
-   
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           UNKNOWNOP
+* DESCRIPTION:    a
+* PRE-CONDITION:  D2 contains the instruction to print. D2 has already been
+*                 identified as an unknown operation.
+* POST-CONDITION: D2 is no longer the opcode.
+* REGISTERS:      a
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 UNKNOWNOP
         MOVE.L  A2,D1   * prep the add to print
         
@@ -1312,52 +1552,199 @@ UNKNOWNOP
         
         MOVE.B  #15,D0   * Indicate we are using trap #15, 15 to in a certain #base
         TRAP    #15      * Perform Trap #3
-        
+
         LEA     NEWLINE,A1 * load newline into register A1
         MOVE.L  #14,D0  * print the string stored in A1
         TRAP    #15
-        
-        RTS
-        *BRA     ITERATION * done with this op, move on to the next iteration
 
- * --- BITMASK ----------------------------------------------------------------
- *@pre      D6 contains the starting bit you want masked, D7 the ending bit
- *
- *@post     D6 contains the bitmask, ready for use
- 
+        RTS
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: Print ASCII hex char
+* DESCRIPTION:    Prints and addres register to console in hex (ASCII chars)
+* PRE-CONDITION:  A6 contains the register for memory to print.
+*                 This parameter would be pre-loaded by, for example:
+*                 "LEA FOO_BAR_ADDR,A6" or "LEA $1234FEED,A6"
+*                 D6 contains the loops to do (number of bytes).
+* POST-CONDITION: 
+* REGISTERS:      
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+PRINT_ASCII_HEX_CHAR
+    MOVEM.L     D0-D7/A0-A5,-(A7) * push data to save
+    CLR.L       D5
+    
+    * fence post check (if-statement, check if 0 > chars)
+    CMPI.B      #0,D6
+    BEQ         INVALID_ASCII_INPUT * go to very last part if invalid
+    
+*    MOVE.L      A6,D4
+    MOVE.L      A6,D7
+PRINT_ASCII_LOOP
+*    MOVE.L      A6,D7 * increase a6's pointer position ea. loop
+*    MOVE.L      D4,D7 * make a mutable copy
+    ROL.L       #4,D7 * roll to next spot
+    MOVEM.L     D7,-(A7) * save D7
+
+    ANDI.L      #HEX_VALUE_MASK_LONG,D7
+    
+    CMPI.L      #0,D7
+    BLT         INVALID_ASCII_INPUT
+
+    CMPI.L      #15,D7
+    BGT         INVALID_ASCII_INPUT
+
+    * this might be faster... to do later, after entire assignment done
+     * CMPI.L      #9,D7
+     * BLE         PRINT_ASCII_0_TO_9
+
+    CMPI.L      #0,D7
+    BEQ         PRINT_ASCII_0
+    CMPI.L      #1,D7
+    BEQ         PRINT_ASCII_1
+    CMPI.L      #2,D7
+    BEQ         PRINT_ASCII_2
+    CMPI.L      #3,D7
+    BEQ         PRINT_ASCII_3
+    CMPI.L      #4,D7
+    BEQ         PRINT_ASCII_4
+    CMPI.L      #5,D7
+    BEQ         PRINT_ASCII_5
+    CMPI.L      #6,D7
+    BEQ         PRINT_ASCII_6
+    CMPI.L      #7,D7
+    BEQ         PRINT_ASCII_7
+    CMPI.L      #8,D7
+    BEQ         PRINT_ASCII_8
+    CMPI.L      #9,D7
+    BEQ         PRINT_ASCII_9
+    CMPI.L      #10,D7
+    BEQ         PRINT_ASCII_A
+    CMPI.L      #11,D7
+    BEQ         PRINT_ASCII_B
+    CMPI.L      #12,D7
+    BEQ         PRINT_ASCII_C
+    CMPI.L      #13,D7
+    BEQ         PRINT_ASCII_D
+    CMPI.L      #14,D7
+    BEQ         PRINT_ASCII_E
+    CMPI.L      #15,D7
+    BEQ         PRINT_ASCII_F
+PRINT_ASCII_0
+    LEA         ASCII_0,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_1
+    LEA         ASCII_1,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_2
+    LEA         ASCII_2,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_3
+    LEA         ASCII_3,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_4
+    LEA         ASCII_4,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_5
+    LEA         ASCII_5,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_6
+    LEA         ASCII_6,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_7
+    LEA         ASCII_7,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_8
+    LEA         ASCII_8,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_9
+    LEA         ASCII_9,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_A
+    LEA         ASCII_A,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_B
+    LEA         ASCII_B,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_C
+    LEA         ASCII_C,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_D
+    LEA         ASCII_D,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_E
+    LEA         ASCII_E,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_F
+    LEA         ASCII_F,A1
+    BRA         PRINT_ASCII_CHAR
+PRINT_ASCII_CHAR
+    MOVE.B      #14,D0
+    TRAP        #15
+    
+    ADD.B       #1,D5 * loop until counter stops
+    CMP.B       D6,D5
+    BGE         PRINT_ASCII_FINISH
+    
+    CLR.L       D7
+    MOVEM.L     (A7)+,D7 * copy back D7 from stack, to mutate its' bits
+    
+    BRA         PRINT_ASCII_LOOP
+INVALID_ASCII_INPUT
+PRINT_ASCII_FINISH
+    MOVEM.L     (A7)+,D0-D7/A0-A5 * pop saved memory
+    RTS
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME: Bitmask
+* DESCRIPTION:    Masks bits in a data register.
+* PRE-CONDITION:  D6 contains the starting bit to be masked, and D7 contains
+*                 the ending bit.  For example, a starting bit of decimal
+*                 value 0 and an ending bit of decimal value 3 will mask the
+*                 bits 0, 1, 2, and 3.
+* POST-CONDITION: D6 contains the bitmask, ready for use.
+* REGISTERS:      D5,D6,D7
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 BITMASK
         MOVE    D5,-(A7)    * push D5 onto the stack so we can use it to
         CLR     D5          * clear D5 so we can use it
 LOOPBIT 
         BSET    D6,D5       * set the D6th bit in D5 to 1
         ADD     #1,D6       * increment D6
-        
+
         CMP     D7,D6       * have we finished?
         BGT     BITMASKDONE * yes
         BRA     LOOPBIT     * no, iterate again
-        
-BITMASKDONE
 
+BITMASKDONE
         MOVE.L  D5,D6
         MOVE    (A7)+,D5    * restore D5
         RTS
-        
- * --- OP0100 -----------------------------------------------------------------
- * @pre      D2 contains the opcode
- *
- * @post     all registers are returned to their previous state
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
 
 
- * ----------------------------------------------------------------------------
- * ----------------------------------------------------------------------------
- * Constants for printing information to the console
-
-CR      EQU     $0D
-LF      EQU     $0A
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* SECTION: Constants/variables used throughout the program.
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+* ---> GENERAL
+CR          EQU     $0D
+LF          EQU     $0A
 MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
 MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
+* ---> OPS
 NOOPERATION DC.B    'NOP',0
 NEGOP       DC.B    'NEG',0
 MOVEOP      DC.B    'MOVE',0
@@ -1375,15 +1762,24 @@ OP_BGE_MSG  DC.B    'BGE',0
 OP_BLT_MSG  DC.B    'BLT',0
 OP_BVC_MSG  DC.B    'BVC',0
 OP_BRA_MSG  DC.B    'BRA',0
-
- * ----------------------------------------------------------------------------
- * ----------------------------------------------------------------------------
- * Data defined constants
- *   - B/W/L (representing Byte, Word, Long)
- *   - A0-A7 (representing the 8 address registers)
- *   - D0-D7 (representing the 8 data registers)
- * ----------------------------------------------------------------------------
-
+* ---> HEX CHARS
+ASCII_0     DC.B    '0',0
+ASCII_1     DC.B    '1',0
+ASCII_2     DC.B    '2',0
+ASCII_3     DC.B    '3',0
+ASCII_4     DC.B    '4',0
+ASCII_5     DC.B    '5',0
+ASCII_6     DC.B    '6',0
+ASCII_7     DC.B    '7',0
+ASCII_8     DC.B    '8',0
+ASCII_9     DC.B    '9',0
+ASCII_A     DC.B    'A',0
+ASCII_B     DC.B    'B',0
+ASCII_C     DC.B    'C',0
+ASCII_D     DC.B    'D',0
+ASCII_E     DC.B    'E',0
+ASCII_F     DC.B    'F',0
+* ---> SPECIAL CHARACTERS
 SPACE       DC.B    ' ',0
 DOLLAR      DC.B    '$',0
 IMD         DC.B    '#',0
@@ -1392,10 +1788,11 @@ OBRACK      DC.B    '(',0
 CBRACK      DC.B    ')',0
 PLUS        DC.B    '+',0
 MINUS       DC.B    '-',0
+* ---> B/W/L (BYTE, WORD, LONG, RESPECTIVELY)
 __B         DC.B    '.B ',0
 __W         DC.B    '.W ',0
 __L         DC.B    '.L ',0
-
+* ---> ADDRESS REGISTERS A0-A7
 __A0        DC.B   'A0',0
 __A1        DC.B   'A1',0    
 __A2        DC.B   'A2',0
@@ -1404,7 +1801,7 @@ __A4        DC.B   'A4',0
 __A5        DC.B   'A5',0
 __A6        DC.B   'A6',0
 __A7        DC.B   'A7',0
-
+* ---> DATA REGISTERS D0-D7
 __D0        DC.B   'D0',0
 __D1        DC.B   'D1',0
 __D2        DC.B   'D2',0
@@ -1413,13 +1810,15 @@ __D4        DC.B   'D4',0
 __D5        DC.B   'D5',0
 __D6        DC.B   'D6',0
 __D7        DC.B   'D7',0
- * ---------------------------------------------------------------------------
- * End of definition segment
- * ---------------------------------------------------------------------------
- * ---------------------------------------------------------------------------
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
 
-* Put variables and constants here
 
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* SECTION: Sample program to run, then attempt testing disassembly on.
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
     ORG $4000
 
     NOP
@@ -1434,7 +1833,11 @@ __D7        DC.B   'D7',0
 END
     RTS
 RLLYEND
-    END    START        ; last line of source
+    END    START
+
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
 
 
 
