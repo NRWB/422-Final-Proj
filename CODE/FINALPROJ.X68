@@ -304,10 +304,11 @@ CMPIREG
         
         CMPI    #%0000000000000001, D6  * Is the Register 001?
         BEQ     CMPIREG001
+        
 END0000          
-
        MOVEM   (A7)+,D0-D1/A0-A1   * Push values to the stack to save
        RTS
+       
 CMPIREG000  * TODO (xxx).W for CMPI
 
 CMPIREG001  * TODO (xxx).L for CMPI
@@ -327,7 +328,7 @@ CMPIREG001  * TODO (xxx).L for CMPI
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0001  
-        MOVEM   D0-D7/A0-A1,-(A7)  * Push vales onto stack
+        MOVEM   D0-D7/A0-A1,-(A7)   * Push vales onto stack
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #8, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
@@ -599,14 +600,11 @@ UNKNOWN *dont know what it is
         
 DONE
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
-<<<<<<< HEAD
         RTS
         
-=======
         BRA     ITERATION
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------        
->>>>>>> origin/master
         
         
 
@@ -808,6 +806,36 @@ OP0111
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1000
+        * Saving values to the stack
+        MOVEM   D0-D7/A0-A1,-(A7)
+
+        * Check if the EA Mode is 001 since both DIVS and OR do not support it
+        MOVE.W  #3, D6              * Prep lower value for bitmask
+        MOVE.W  #5, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000000001000, D6  * Is the mode 001, an unsupported mode?
+        BEQ     UNKNOWN                 * If so, the op is not supported
+        
+        * Checking for DIVS
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000111000000, D6  * Are we DIVS?
+        BNE     NOTDIVS                 * If not, branch to see if it's OR
+        
+        LEA     DIVSOP,A1           * We found DIVS
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+
+        * TODO: Print out register, EA mode, and EA register
+        
+NOTDIVS * It is confirmed OR at this point
+        * TODO: Print out register, EA mode, and EA register
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -1745,6 +1773,7 @@ MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
 MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
 * ---> OPS
+DIVSOP      DC.B    'DIVS',0
 NOOPERATION DC.B    'NOP',0
 NEGOP       DC.B    'NEG',0
 MOVEOP      DC.B    'MOVE',0
@@ -1837,6 +1866,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
