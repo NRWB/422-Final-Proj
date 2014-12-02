@@ -431,7 +431,7 @@ OP0011
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0100  
-        * TODO: lea, movem, neg?
+        * TODO: lea, movem
 
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
         
@@ -1866,6 +1866,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
