@@ -783,12 +783,13 @@ BCC_END * reload the memory, call RTS
 *-----------------------------------------------------------------------------
 *-----------------------------------------------------------------------------
 * NAME: OP_0111   ()
-* DESCRIPTION:    a
-* PRE-CONDITION:  b
-* POST-CONDITION: c
-* REGISTERS:      d
+* DESCRIPTION:    OP code 0111 is not supported. 
+* PRE-CONDITION:  
+* POST-CONDITION: 
+* REGISTERS:
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0111
+        BEQ     UNKNOWN     * OP 0111 is not supported
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -831,12 +832,18 @@ OP1000
         MOVE.B  #14,D0              * Trap #14 prints out the data
         TRAP    #15                 * Perform Trap #14
         
-
-        * TODO: Print out register, EA mode, and EA register
+        BSR     EAHELPER611         * Print out data. TODO: DOESN'T WORK
         
 NOTDIVS * It is confirmed OR at this point
-        * TODO: Print out register, EA mode, and EA register
+        LEA     OROP,A1         * We found OR
+        MOVE.B  #14,D0          * Trap #14 prints out the data
+        TRAP    #15             * Perform Trap #14
+        
+        BSR     EAHELPER611
 
+OP1000END
+        MOVEM   D0-D7/A0-A1,-(A7)
+        RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -1782,6 +1789,7 @@ JSROP       DC.B    'JSR ',0
 RTSOP       DC.B    'RTS',0
 LEAOP       DC.B    'LEA',0
 BCLROP      DC.B    'BCLR',0
+OROP        DC.B    'OR',0
 ORIOP       DC.B    'ORI',0
 CMPIOP      DC.B    'CMPI',0
 DATA        DC.B    ' DATA $',0
@@ -1858,6 +1866,7 @@ __D7        DC.B   'D7',0
     LEA      JSROP,A1
     NEG.W    -(A7)
     JSR      END
+    DIVS    #1, D0
 
 END
     RTS
@@ -1866,6 +1875,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
