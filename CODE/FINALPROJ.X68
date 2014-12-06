@@ -97,23 +97,91 @@ START:  ORG    $1000            * first instruction of program
         * MOVE.W  D6,D2           * move the bitmask to D2
         
 LOOP    
-        
-        * MOVE.W  #BITMASK,D2     * Load the bitmask into data register D2
         MOVE    D6,-(A7)        * save the bitmask on the stack
         MOVE.W  (A2)+,D2        * Read an operation into D1
         AND.W   D2,D6           * Apply this bitmask
         
+        CMP     #OP_0000,D6     * Does the operation start with 0000?
+        BNE     NOT0000         * No, check next case
+        BSR     OP0000          * Branch to subroutine 0000
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT0000        
         CMP     #OP_0001,D6     * Does the operation start with 0001?
-        BNE     NOT0001            * No, check next case
+        BNE     NOT0001         * No, check next case
         BSR     OP0001          * Branch to subroutine 0001
         BRA     ITERATION       * Move to next iteration of the loop
-NOT0001       
+NOT0001
+        CMP     #OP_0010,D6     * Does the operation start with 0010?
+        BNE     NOT0010         * No, check next case
+        BSR     OP0010          * Branch to subroutine 0010
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT0010
+        CMP     #OP_0011,D6     * Does the operation start with 0011?
+        BNE     NOT0011         * No, check next case
+        BSR     OP0011          * Branch to subroutine 0011
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT0011
         CMP     #OP_0100,D6     * Does the operation start with 0100?
-        BNE     NEXT            * No, check next case
+        BNE     NOT0100         * No, check next case
         BSR     OP0100          * Branch to subroutine 0100
         BRA     ITERATION       * Move to next iteration of the loop
+NOT0100
+        CMP     #OP_0101,D6     * Does the operation start with 0101?
+        BNE     NOT0101         * No, check next case
+        BSR     OP0101          * Branch to subroutine 0101
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT0101
+        CMP     #OP_0110,D6     * Does the operation start with 0110?
+        BNE     NOT0110         * No, check next case
+        BSR     OP0110          * Branch to subroutine 0110
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT0110
+        CMP     #OP_0111,D6     * Does the operation start with 0111?
+        BNE     NOT0111         * No, check next case
+        BSR     OP0111          * Branch to subroutine 0111
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT0111
+        CMP     #OP_1000,D6     * Does the operation start with 1000?
+        BNE     NOT1000         * No, check next case
+        BSR     OP1000          * Branch to subroutine 1000
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT1000
+        CMP     #OP_1001,D6     * Does the operation start with 1001?
+        BNE     NOT1001         * No, check next case
+        BSR     OP1001          * Branch to subroutine 1001
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT1001
+        CMP     #OP_1010,D6     * Does the operation start with 1010?
+        BNE     NOT1010         * No, check next case
+        BSR     OP1010          * Branch to subroutine 1010
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT1010
+        CMP     #OP_1011,D6     * Does the operation start with 1011?
+        BNE     NOT1011         * No, check next case
+        BSR     OP1011          * Branch to subroutine 1011
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT1011
+        CMP     #OP_1100,D6     * Does the operation start with 1100?
+        BNE     NOT1100         * No, check next case
+        BSR     OP1100          * Branch to subroutine 1100
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT1100
+        CMP     #OP_1101,D6     * Does the operation start with 1101?
+        BNE     NOT1101         * No, check next case
+        BSR     OP1101          * Branch to subroutine 1101
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT1101
+        CMP     #OP_1110,D6     * Does the operation start with 1110?
+        BNE     NOT1110         * No, check next case
+        BSR     OP1110          * Branch to subroutine 1110
+        BRA     ITERATION       * Move to next iteration of the loop
+NOT1110
+        CMP     #OP_1111,D6     * Does the operation start with 1111?
+        BNE     LOOPUNKNOWNOP   * No, check next case
+        BSR     OP1111          * Branch to subroutine 1111
+        BRA     ITERATION       * Move to next iteration of the loop
         
-NEXT
+LOOPUNKNOWNOP
         BSR     UNKNOWNOP
         
 ITERATION
@@ -342,6 +410,17 @@ OP0001
         MOVE.B  #14,D0      * Trap #14 to print out
         TRAP    #15         * Perform Trap #14
         
+        MOVE.W  #12, D6              * Prep lower value for bitmask
+        MOVE.W  #13, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        
+        AND     D2,D6   * get the size bits
+        
+        MOVE.L  D6,D5
+        
+        LSR     #8,D5
+        LSR     #4,D5
+        
         BSR     SIZE67
         BSR     EAHELPER05
         
@@ -387,6 +466,8 @@ ENDOP0001
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0010
 
+    BSR     UNKNOWNOP
+    RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -405,16 +486,21 @@ OP0010
 OP0011
     MOVEM   D0-D7/A0-A6, -(A7)
     
-    MOVE.W  #6,D6
-    MOVE.W  #8,D7
+    *MOVE.W  #6,D6
+    *MOVE.W  #8,D7
     
-    BSR     BITMASK
+    *BSR     BITMASK
     
-    AND.W   D2,D6
+    *AND.W   D2,D6
     
-    CMP     #%0000000001000000,D6
+    *CMP     #%0000000001000000,D6
     *BNE     NEXT15
-    BSR     * for MOVEA.W
+    *BSR     * for MOVEA.W
+    
+    MOVEM   (A7)+,D0-D7/A0-A6
+    
+    BSR     UNKNOWNOP
+    RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -620,6 +706,9 @@ DONE
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0101
 
+    BSR     UNKNOWNOP
+    RTS
+
 * testing branching
 * op op op
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
@@ -789,7 +878,8 @@ BCC_END * reload the memory, call RTS
 * REGISTERS:
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0111
-        BEQ     UNKNOWN     * OP 0111 is not supported
+    BSR     UNKNOWNOP
+    RTS
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -834,6 +924,16 @@ OP1000
         
         BSR     EAHELPER611         * Print out data. TODO: DOESN'T WORK
         
+        LEA     COMMA,A1            * We found DIVS
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+        BSR     EAHELPER05         * Print out data. TODO: DOESN'T WORK
+        
+        LEA     NEWLINE,A1          * We found DIVS
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
 NOTDIVS * It is confirmed OR at this point
         LEA     OROP,A1         * We found OR
         MOVE.B  #14,D0          * Trap #14 prints out the data
@@ -861,6 +961,9 @@ OP1000END
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1001
 
+    BSR     UNKNOWNOP
+    RTS
+
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -875,6 +978,9 @@ OP1001
 * REGISTERS:      d
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1010
+
+    BSR     UNKNOWNOP
+    RTS
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -893,6 +999,9 @@ OP1010
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1011
 
+    BSR     UNKNOWNOP
+    RTS
+
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -909,6 +1018,9 @@ OP1011
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1100
+
+    BSR     UNKNOWNOP
+    RTS
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -927,6 +1039,9 @@ OP1100
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1101
 
+    BSR     UNKNOWNOP
+    RTS
+
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -944,6 +1059,9 @@ OP1101
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1110
 
+    BSR     UNKNOWNOP
+    RTS
+
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -959,6 +1077,9 @@ OP1110
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1111
 
+    BSR     UNKNOWNOP
+    RTS
+
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -969,6 +1090,7 @@ OP1111
 * NAME:           EAHELPER611
 * DESCRIPTION:    a
 * PRE-CONDITION:  D2 contains the instruction to print modes for.
+*                 D5 contains the size of potential immediate data
 * POST-CONDITION: Determines mode, passes D2 to EAHELPER05 to print.
 * REGISTERS:      a
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
@@ -976,8 +1098,6 @@ EAHELPER611
     MOVEM  D0-D7/A0-A1,-(A7) * save stuff
     
     * to move the mode where EAHELPER50 can process it
-    MOVE.L  #6,D6   *prep registers to create bitmask
-    MOVE.L  #8,D7
     
     BSR     BITMASK * create bitmask
     
@@ -1032,6 +1152,8 @@ EAHELPER05
     * todo: add code for printing immediate values
     
     MOVEM   D0-D7/A0-A1,-(A7) * save stuff
+    
+    MOVE.L  D5,D3   * move the register containing the potential size into D3
     
     MOVE.L  #3,D6
     MOVE.L  #5,D7
@@ -1125,22 +1247,64 @@ NOTADRINDIRECTPRE * immediate
     CMPI    #%0000000000111000,D6 * is it immediate?
     BNE     NOTIMMEDIATE
 
-    MOVE.W  #6, D6              * Prep lower value for bitmask
-    MOVE.W  #7, D7              * Prep upper value for bitmask
+    MOVE.W  #0, D6              * Prep lower value for bitmask
+    MOVE.W  #2, D7              * Prep upper value for bitmask
     BSR     BITMASK             * Finalize bitmask setup
-    AND     D2,D6               * Apply bitmask  
+    AND     D2,D6               * Apply bitmask
 
+    CMPI    #1,D3 * is it a byte?
+    BNE     NOTIMMBYTE
+    
+    LEA     IMD,A1 *print out the '#' indicating an immediate value
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    MOVE.W  #8, D6              * Prep lower value for bitmask
+    MOVE.W  #31, D7              * Prep upper value for bitmask
+    BSR     BITMASK             * Finalize bitmask setup
+        
+    MOVE.W  (A2)+,D1
+    
+    AND     D6,D1
+        
+    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
+    TRAP    #15      * Perform Trap #3
+    
+    BRA     ENDEAHELPER05
+
+NOTIMMBYTE
+    
+    CMPI    #2,D3 * is it a word?
+    BNE     NOTIMMWORD
+    
+    LEA     IMD,A1 *print out the '#' indicating an immediate value
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    MOVE.W  #16, D6              * Prep lower value for bitmask
+    MOVE.W  #31, D7             * Prep upper value for bitmask
+    BSR     BITMASK             * Finalize bitmask setup
+        
+    MOVE.W  (A2)+,D1
+    
+    AND     D6,D1               * Apply bitmask
+        
+    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
+    TRAP    #15      * Perform Trap #3
+    
+    BRA     ENDEAHELPER05
+    
+NOTIMMWORD
+    CMPI    #3,D6 * is it a long?
+    BNE     NOTIMMEDIATE
+    
     LEA     IMD,A1 *print out the '#' indicating an immediate value
     MOVE.B  #14,D0
     TRAP    #15
         
-    MOVE.W  (A2)+,D2
-    
-    MOVE.W  D2,D1
-    
-    MOVE.W  #16,D2
+    MOVE.L  (A2)+,D1
         
-    MOVE.B  #15,D0   * Indicate we are using trap #15, 15 to in a certain #base
+    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
     TRAP    #15      * Perform Trap #3
     
     BRA     ENDEAHELPER05
@@ -1785,20 +1949,20 @@ NOOPERATION DC.B    'NOP',0
 NEGOP       DC.B    'NEG',0
 MOVEOP      DC.B    'MOVE',0
 MOVEMOP     DC.B    'MOVEM',0
-JSROP       DC.B    'JSR ',0
+JSROP       DC.B    'JSR',0
 RTSOP       DC.B    'RTS',0
 LEAOP       DC.B    'LEA',0
-BCLROP      DC.B    'BCLR',0
+BCLROP      DC.B    'BCLR ',0
 OROP        DC.B    'OR',0
 ORIOP       DC.B    'ORI',0
 CMPIOP      DC.B    'CMPI',0
 DATA        DC.B    ' DATA $',0
-OP_BCC_MSG  DC.B    'BCC',0
-OP_BCS_MSG  DC.B    'BCS',0
-OP_BGE_MSG  DC.B    'BGE',0
-OP_BLT_MSG  DC.B    'BLT',0
-OP_BVC_MSG  DC.B    'BVC',0
-OP_BRA_MSG  DC.B    'BRA',0
+OP_BCC_MSG  DC.B    'BCC ',0
+OP_BCS_MSG  DC.B    'BCS ',0
+OP_BGE_MSG  DC.B    'BGE ',0
+OP_BLT_MSG  DC.B    'BLT ',0
+OP_BVC_MSG  DC.B    'BVC ',0
+OP_BRA_MSG  DC.B    'BRA ',0
 * ---> HEX CHARS
 ASCII_0     DC.B    '0',0
 ASCII_1     DC.B    '1',0
@@ -1875,6 +2039,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
