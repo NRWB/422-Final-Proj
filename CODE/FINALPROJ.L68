@@ -1,6 +1,6 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.15.02
-Created On: 12/6/2014 5:48:16 PM
+Created On: 12/6/2014 6:11:45 PM
 
 00000000                             1  *    666
 00000000                             2  *   66 66
@@ -195,7 +195,7 @@ Created On: 12/6/2014 5:48:16 PM
 00001146                           191          *TRAP    #15             * Perform Trap #14
 00001146                           192  
 00001146  BA4A                     193          CMP     A2,D5           * Compare the starting address to ending address
-00001148  6700 2ED6                194          BEQ     END             * If they are equal, branch 
+00001148  6700 2EDE                194          BEQ     END             * If they are equal, branch 
 0000114C  6000 FEEC                195          BRA     LOOP            * Otherwise, branch back to LOOP
 00001150                           196  *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 00001150                           197  *-----------------------------------------------------------------------------
@@ -2078,14 +2078,16 @@ Created On: 12/6/2014 5:48:16 PM
 0000400A  D200                    2074      ADD.B    D0,D1
 0000400C  48A7 4000               2075      MOVEM    D1,-(A7)
 00004010  43F8 1C53               2076      LEA      JSROP,A1
-00004014  4467                    2077      NEG.W    -(A7)
-00004016  4EB9 00004020           2078      JSR      END
-0000401C  81FC 0001               2079      DIVS    #1, D0
-00004020                          2080  
-00004020                          2081  END
-00004020  4E75                    2082      RTS
-00004022                          2083  RLLYEND
-00004022                          2084      END    START
+00004014  6700 0012               2077      BEQ      END
+00004018  6600 000E               2078      BNE      END
+0000401C  4467                    2079      NEG.W    -(A7)
+0000401E  4EB9 00004028           2080      JSR      END
+00004024  81FC 0001               2081      DIVS    #1, D0
+00004028                          2082  
+00004028                          2083  END
+00004028  4E75                    2084      RTS
+0000402A                          2085  RLLYEND
+0000402A                          2086      END    START
 
 No errors detected
 No warnings generated
@@ -2131,7 +2133,7 @@ DOLLAR              1CB9
 DONE                1456
 EAHELPER05          1620
 EAHELPER611         15DE
-END                 4020
+END                 4028
 END0000             12B4
 END67               19B4
 ENDEAHELPER05       1770
@@ -2296,7 +2298,7 @@ PRINT_ASCII_F       1BCC
 PRINT_ASCII_FINISH  1BEE
 PRINT_ASCII_HEX_CHAR  1A66
 PRINT_ASCII_LOOP    1A76
-RLLYEND             4022
+RLLYEND             402A
 RTSOP               1C57
 SIZE67              1976
 SIZE68              19BA
