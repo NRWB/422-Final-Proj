@@ -238,21 +238,21 @@ OP0000
         MOVE.B  #14,D0              * Trap #14 prints out space
         TRAP    #15                 * Perform Trap #14
         
-        CLR     D3                  * clear D3, it is a parameter of ea05 to indicate size
-        BSET    #0,D3               * in this case it is always word, so set the first bit of D3
-    
-        BSR     EAHELPER05          * Print out data.
-
-        LEA     COMMA,A1            * formatting
-        MOVE.B  #14,D0              * Trap #14 prints out a comma
-        TRAP    #15                 * Perform Trap #14
-        
         * Set up for printing out the Register
         BCLR    #6,D2               * Clear bit 6
         BCLR    #7,D2               * Clear bit 7
         BCLR    #8,D2               * Clear bit 8
         
         BSR     EAHELPER611         * Print out Register
+
+        LEA     COMMA,A1            * formatting
+        MOVE.B  #14,D0              * Trap #14 prints out a comma
+        TRAP    #15                 * Perform Trap #14
+        
+        CLR     D3                  * clear D3, it is a parameter of ea05 to indicate size
+        BSET    #0,D3               * in this case it is always word, so set the first bit of D3
+    
+        BSR     EAHELPER05          * Print out data.
         
         LEA     NEWLINE,A1          * Formatting
         MOVE.B  #14,D0              * Trap #14 prints out the data
@@ -462,7 +462,7 @@ OP0011
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0100  
-        * TODO: lea, movem
+        * TODO: movem
 
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
         
@@ -474,7 +474,7 @@ OP0100
         MOVE.B  #13,D0          * Print a newline
         TRAP    #15
         
-        BRA     DONE *we found it, move on to the next iteration
+        BRA     DONE0100 *we found it, move on to the next iteration
 NOTNOP *NEG
         
         * prep values for BITMASK subroutine
@@ -494,13 +494,13 @@ NOTNOP *NEG
         BSR     BITMASK * generate a bitmask to be used to check mode
         
         CMPI    #%0000000000001000,D6 * check to see if it is the unsupported mode
-        BEQ     UNKNOWN * if it is, print print out as hex indicating bad op
+        BEQ     UNKNOWN0100 * if it is, print print out as hex indicating bad op
         
         CMPI    #%0000000000101000,D6 * check to see if it is the unsupported mode
-        BEQ     UNKNOWN * if it is, print print out as hex indicating bad op
+        BEQ     UNKNOWN0100 * if it is, print print out as hex indicating bad op
         
         CMPI    #%0000000000110000,D6 * check to see if it is the unsupported mode
-        BEQ     UNKNOWN * if it is, print print out as hex indicating bad op
+        BEQ     UNKNOWN0100 * if it is, print print out as hex indicating bad op
       
         * it is NEG, print
         LEA     NEGOP,A1
@@ -515,7 +515,7 @@ NOTNOP *NEG
         MOVE.B  #14,D0
         TRAP    #15
         
-        BRA     DONE * we found the op, move to next iteration
+        BRA     DONE0100 * we found the op, move to next iteration
         
 NOTNEG *MOVEM
 
@@ -541,7 +541,7 @@ NOTNEG *MOVEM
         
         MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
         
-        BRA     DONE          * we found and printed, move on to the next iteration
+        BRA     DONE0100          * we found and printed, move on to the next iteration
         
 NOTMOVEM *JSR
         * prep values for BITMASK subroutine
@@ -559,9 +559,13 @@ NOTMOVEM *JSR
         MOVE.B  #14,D0          * Print a newline and JSR
         TRAP    #15
         
+        LEA     SPACE,A1
+        MOVE.B  #14,D0          * Print a newline and JSR
+        TRAP    #15
+        
         * print out where we are jumping to
         
-        MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+        MOVE.W  (A2)+,D2 * read in the next word of the instruction 
         
         MOVE.L  D2,D1   * save the opcode to print
         
@@ -583,7 +587,7 @@ NOTMOVEM *JSR
         MOVE.B  #14,D0          * Print a newline
         TRAP    #15
         
-        BRA     DONE          * we already found instruction, next iteration
+        BRA     DONE0100          * we already found instruction, next iteration
 NOTJSR *RTS
 
         * prep values for BITMASK subroutine
@@ -601,7 +605,7 @@ NOTJSR *RTS
         MOVE.B  #13,D0          * Print a newline and RTS
         TRAP    #15
         
-        BRA     DONE          * we already found instruction, next iteration
+        BRA     DONE0100          * we already found instruction, next iteration
 NOTRTS  *LEA
        
         * prep values for BITMASK subroutine
@@ -613,23 +617,106 @@ NOTRTS  *LEA
         AND     D2,D6   * apply bitmask
         
         CMPI    #%0000000111000000,D6
-        BNE     UNKNOWN          * it's not LEA, we dont know what it is
+        BNE     UNKNOWN0100          * it's not LEA, we dont know what it is
+        
+        * prep values for BITMASK subroutine
+        MOVE.L  #3,D6
+        MOVE.L  #5,D7
+        
+        BSR     BITMASK
+        
+        AND     D2,D6   * apply bitmask
+        
+        CMPI    #%0000000000001000,D6
+        BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
+        
+        CMPI    #%0000000000011000,D6
+        BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
+        
+        CMPI    #%0000000000100000,D6
+        BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
+        
+        CMPI    #%0000000000101000,D6
+        BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
+        
+        CMPI    #%0000000000110000,D6
+        BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
+        
+        CMPI    #%0000000000111000,D6
+        BEQ     TWOWORDLEA          * it's not LEA, we dont know what it is
         
         * check to make sure it is a supported mode and size
         
         LEA     LEAOP,A1
-        MOVE.B  #13,D0          * Print LEA
+        MOVE.B  #14,D0          * Print LEA
         TRAP    #15
         
-        * call EA helper
-        MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
-                
-        BRA     DONE          * we already found instruction, next iteration
+        BCLR    #7,D2
+        BCLR    #8,D2 * needed so eahelper recognizes it as the correct mode
         
-UNKNOWN *dont know what it is
+        LEA     SPACE,A1
+        MOVE.B  #14,D0          * Print SPACE
+        TRAP    #15
+        
+        BSR     EAHELPER05
+        
+        LEA     COMMA,A1
+        MOVE.B  #14,D0          * Print COMMA
+        TRAP    #15
+        
+        BSR     EAHELPER611
+        
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0          * Start a new line
+        TRAP    #15
+        
+        
+        * call EA helper
+        * MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+                
+        BRA     DONE0100          * we already found instruction, next iteration
+        
+TWOWORDLEA
+
+        LEA     LEAOP,A1
+        MOVE.B  #14,D0   * Print LEA
+        TRAP    #15
+        
+        LEA     SPACE,A1
+        MOVE.B  #14,D0   * Print SPACE
+        TRAP    #15
+
+        MOVE.W  (A2)+,D1
+        
+        MOVE.L  #0,D6
+        MOVE.L  #15,D7
+        
+        BSR     BITMASK
+        
+        AND.L   D6,D1   * shave off bad info
+        
+        MOVE.B  #3,D0   * Print the address which was the source
+        TRAP    #15
+        
+        LEA     COMMA,A1
+        MOVE.B  #14,D0  * Print COMMA
+        TRAP    #15
+        
+        BCLR    #7,D2
+        BCLR    #8,D2 * needed so eahelper recognizes it as the correct mode
+        
+        BSR     EAHELPER611
+        
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0          * Start a new line
+        TRAP    #15
+        
+        BRA     DONE0100
+        
+UNKNOWN0100 *dont know what it is
         BSR     UNKNOWNOP
         
-DONE
+DONE0100
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
         RTS
         
@@ -852,7 +939,7 @@ OP1000
         AND     D2,D6               * Apply bitmask
         
         CMPI    #%0000000000001000, D6  * Is the mode 001, an unsupported mode?
-        BEQ     UNKNOWN                 * If so, the op is not supported
+        BEQ     UNKNOWNOP                 * If so, the op is not supported
         
         * Checking for DIVS
         MOVE.W  #6, D6              * Prep lower value for bitmask
@@ -2010,6 +2097,8 @@ __D7        DC.B   'D7',0
     DIVS    #1, D0
     BCLR    D0, D1
     ORI     #4, D1
+    BRA     END
+    BEQ     END
 
 END
     RTS
@@ -2019,6 +2108,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
