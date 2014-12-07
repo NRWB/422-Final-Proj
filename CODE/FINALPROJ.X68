@@ -209,177 +209,112 @@ ITERATION
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0000
-        MOVEM   D0-D1/A0-A1,-(A7)   * Push values to the stack to save
+        MOVEM   D0-D7/A0-A1,-(A7)   * Push values to the stack to save
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #8, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
         AND     D2,D6               * Apply bitmask
         
+        * TODO: Consider static  AND dynamic BCLR.
+        * Only works for Dynamic right now
         CMPI    #%0000000110000000, D6  * Are we BCLR?
         BNE     NOTBCLR                 * If not, branch to other OP0000 functions
         
+        MOVE.W  #3, D6              * Prep lower value for bitmask
+        MOVE.W  #5, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        * Checking for unsupported mode
+        CMPI    #%0000000000001000, D6  * Is the mode An, an unsupported mode?
+        BEQ     UNKNOWN0000             * If so, branch to other OP0000 functions
+        
+        * Confirmed BCLR at this point
         LEA     BCLROP,A1           * We found BCLR
         MOVE.B  #14,D0              * Trap #14 prints out the data
         TRAP    #15                 * Perform Trap #14
-        BRA     END0000              * Found the op, move to next iteration
 
+        LEA     SPACE,A1            * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out space
+        TRAP    #15                 * Perform Trap #14
+        
+        CLR     D3                  * clear D3, it is a parameter of ea05 to indicate size
+        BSET    #0,D3               * in this case it is always word, so set the first bit of D3
+    
+        BSR     EAHELPER05          * Print out data.
+
+        LEA     COMMA,A1            * formatting
+        MOVE.B  #14,D0              * Trap #14 prints out a comma
+        TRAP    #15                 * Perform Trap #14
+        
+        * Set up for printing out the Register
+        BCLR    #6,D2               * Clear bit 6
+        BCLR    #7,D2               * Clear bit 7
+        BCLR    #8,D2               * Clear bit 8
+        
+        BSR     EAHELPER611         * Print out Register
+        
+        LEA     NEWLINE,A1          * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+        BRA     END0000             * Found the op, move to next iteration
+        
 NOTBCLR * Possible options left are ORI or CMPI
         MOVE.W  #9, D6              * Prep lower value for bitmask
         MOVE.W  #11, D7             * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
         AND     D2,D6               * Apply bitmask
         
-        CMPI    #%0000000000000000, D6  * Are we ORI?
-        BEQ     ISORI                   * If ORI, branch to ISORI
+        CMPI    #%0000000000000000, D6   * Are we possibly ORI?
+        BNE     NOTORI                   * If not, branch to NOTORI
         
-        CMPI    #%0000110000000000, D6  * Hmm... Maybe we're CMPI?
-        BEQ     ISCMPI                  * If CMPI, branch to ISCMPI
-        
-        BNE     UNKNOWNOP               * Otherwise, this op is an imposter. 
-                                        * We don't deal too kindly with imposters.
-        
-ISORI   * TODO
-        
-
-ISCMPI
-        LEA     CMPIOP, A1          * Load 'CMPI' into the output window
-        MOVE.B  #14,D0              * Trap #14 prints out the data in D0
-        TRAP    #15                 * Perform Trap #14
-        
-        * Determine the Size
+        * Size check to see if unsupported ORI mode
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #7, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
         AND     D2,D6               * Apply bitmask
         
-        CMPI    #%0000000011000000, D6  * Imposter Op
-        BEQ     UNKNOWNOP               * Deal with the imposter
+        CMPI    #%0000000011000000, D6  * Are bits 6,7 == 1,1?
+        BEQ     UNKNOWN0000             * If so, unknown op. 
         
-        CMPI    #%0000000000000000, D6  * The size is a BYTE
-        BEQ     CMPIBYTE                * Branch to CMPI.B
-        
-        CMPI    #%0000000001000000, D6  * The size is a WORD
-        BEQ     CMPIWORD                * Branch to CMPI.W
-        
-        CMPI    #%0000000010000000, D6  * The size is a LONG
-        BEQ     CMPILONG                * Branch to CMPI.L
-        
-CMPIBYTE
-        LEA     __B, A1     * Load .B
-        MOVE.B  #14, D0     * Print out data
-        TRAP    #15         * Perform Trap #14
-        
-        LEA     IMD, A1     * Load #
-        MOVE.B  #14, D0     * Print out data
-        TRAP    #15         * Perform Trap #14
-        
-        MOVE.W  (A2)+,D3    * Advance a word forward to get the value.
-        MOVE.B  D3,D1       * Move the lower byte from D3 into D1
-        MOVE.W  -(A2),D3    * Now go back
-        MOVE.B  #14, D0     * Print out the data
-        TRAP    #15         * Perform Trap #14 
-        
-        BRA     CMPIEA      * Branch to determine Effective Address
-        
-CMPIWORD
-        LEA     __W, A1     * Load .W
-        MOVE.B  #14, D0     * Print out data
-        TRAP    #15         * Perform Trap #14
-        
-        LEA     IMD, A1     * Load #
-        MOVE.B  #14, D0     * Print out data
-        TRAP    #15         * Perform Trap #14
-        
-        MOVE.W  (A2)+,D3    * Advance a word forward to get the value.
-        MOVE.W  -(A2),D1    * Copy the immediate Value into D1, then go back
-        MOVE.B  #14, D0     * Print out the data
-        TRAP    #15         * Perform Trap #14
-        
-        
-        BRA     CMPIEA      * Branch to determine Effective Address
-        
-CMPILONG
-        LEA     __L, A1     * Load .L
-        MOVE.B  #14, D0     * Print out data
-        TRAP    #15         * Perform Trap #14
-        
-        LEA     IMD, A1     * Load #
-        MOVE.B  #14, D0     * Print out data
-        TRAP    #15         * Perform Trap #14
-        
-        MOVE.W  (A2)+,D3    * Advance a word forward to get the value.
-        MOVE.L  -(A2),D1    * Copy the immediate value (long) into D1, then go back
-        MOVE.B  #14, D0     * Print out the data
-        TRAP    #15         * Perform Trap #14
-        
-        BRA     CMPIEA      * Branch to determine Effective Address
-        
-CMPIEA
-        * So far the buffer is CMPI.X #Y ... Now we need to add a comma
-        LEA     COMMA, A1   * Load ,
-        MOVE.B  #14, D0     * Print out data
-        TRAP    #15         * Perform Trap #14
-        
-        LEA     __L, A1     * Load .L
-        MOVE.B  #14, D0     * Print out data
-        TRAP    #15         * Perform Trap #14
-        
-        * Determine the mode
+        * Mode check to see if unsupported ORI mode
         MOVE.W  #3, D6              * Prep lower value for bitmask
         MOVE.W  #5, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
         AND     D2,D6               * Apply bitmask
         
-        CMPI    #%0000000000001000, D6  * Is the Mode 001, an unsupported mode for CMPI?
-        BEQ     UNKNOWNOP               * Imposter op
+        CMPI    #%0000000000001000, D6  * Is the mode An, an unsupported mode?
+        BEQ     UNKNOWN0000             * If so, unknown op. 
         
-        CMPI    #%0000000000101000, D6  * Is the Mode 101, an unsupported mode?
-        BEQ     UNKNOWNOP               * Imposter op
+        * Confirmed ORI at this point
+        * TODO: Get the immediate data following the instruction and print it out
+        LEA     ORIOP, A1           * Load 'ORI' into the output window
+        MOVE.B  #14,D0              * Trap #14 prints out the data in D0
+        TRAP    #15                 * Perform Trap #14
         
-        CMPI    #%0000000000110000, D6  * Is the Mode 110, an unsupported mode?
-        BEQ     UNKNOWNOP               * Imposter op
-
-        CMPI    #%0000000000111000, D6  * Is the Mode 111?
-        BEQ     CMPIREG                 * Further investigation is needed
+        BSR     SIZE67              * Print the size
+        BSR     EAHELPER05          * Print out the EA
         
-        * will need to call the EA helpers when they are complete
+        LEA     NEWLINE,A1          * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
         
-        * Mode is verified to be valid at this point
-        *CMPI    #%0000000000000000, D6  * AMode = Dn, Reg = Dn
-        *BSR     MODE_DN
+        BRA     END0000             * Done with op. Move to next iteration
         
-        *CMPI    #%0000000000010000, D6  * AMode = (An), Reg = An
-        *BSR     MODE_AN
+NOTORI  * Possible option left is CMPI
+        CMPI    #%0000110000000000, D6  * Are we CMPI?
+        BNE     UNKNOWN0000             * If not, unknown op
         
-        *CMPI    #%0000000000011000, D6  * AMode = (An)+, Reg = An
-        *BSR     MODE_IAN_POS
+        * TODO: Continue checking for CMPI validity
         
-        *CMPI    #%0000000000000000, D6  * AMode = -(An), Reg = An
-        *BSR     MODE_IAN_PRE
-        
-        * Reached End of CMPI. Everything has been printed out
-        MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
-        RTS
-        
-CMPIREG
-        MOVE.W  #0, D6              * Prep lower value for bitmask
-        MOVE.W  #2, D7              * Prep upper value for bitmask
-        BSR     BITMASK             * Finalize bitmask setup
-        AND     D2,D6               * Apply bitmask
-        
-        CMPI    #%0000000000000000, D6  * Is the Register 000?
-        BEQ     CMPIREG000
-        
-        CMPI    #%0000000000000001, D6  * Is the Register 001?
-        BEQ     CMPIREG001
+UNKNOWN0000
+        BSR     UNKNOWNOP       * Unknown op
         
 END0000          
-       MOVEM   (A7)+,D0-D1/A0-A1   * Push values to the stack to save
+       MOVEM   (A7)+,D0-D7/A0-A1   * Push values to the stack to save
        RTS
-       
-CMPIREG000  * TODO (xxx).W for CMPI
 
-CMPIREG001  * TODO (xxx).L for CMPI
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -936,7 +871,7 @@ OP1000
         MOVE.B  #14,D0              * Trap #14 prints out space
         TRAP    #15                 * Perform Trap #14
         
-        CLR     D3                  * clear D5, it is a parameter of ea05 to indicate size
+        CLR     D3                  * clear D3, it is a parameter of ea05 to indicate size
         BSET    #0,D3               * in this case it is always word, so set the first bit of D3
                                     * to indicate a potential immediate of size word
         
@@ -946,10 +881,8 @@ OP1000
         MOVE.B  #14,D0              * Trap #14 prints out a comma
         TRAP    #15                 * Perform Trap #14
         
-        *--------------------------------------------------------------------
         * bit manipulation is needed to make the outlier DIVS work
         * with the generic EAHELPER611
-        
         BCLR    #6,D2
         BCLR    #7,D2
         BCLR    #8,D2
@@ -957,11 +890,7 @@ OP1000
         * the above bits were cleared so that eahelper05 knows the destination
         * is a data register.
         
-        BSR     EAHELPER611         * Print out data. TODO: DOESN'T WORK
-                                    * it doesnt work because DIVS is an unusual op
-                                    * you need to do some bit manipulation to
-                                    * use the helpers, since they are generic
-                                    * and DIVS is a special case
+        BSR     EAHELPER611 
 
         LEA     NEWLINE,A1          * We found DIVS
         MOVE.B  #14,D0              * Trap #14 prints out the data
@@ -2065,9 +1994,11 @@ __D7        DC.B   'D7',0
 *-----------------------------------------------------------------------------
 *-----------------------------------------------------------------------------
 * SECTION: Sample program to run, then attempt testing disassembly on.
+* STARTING: 16384
+* ENDING:   16420
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
     ORG $4000
-
+    
     NOP
     MOVE.B   #%10011010, D0
     MOVE.B   #%10101001, D1
@@ -2077,14 +2008,18 @@ __D7        DC.B   'D7',0
     NEG.W    -(A7)
     JSR      END
     DIVS    #1, D0
+    BCLR    D0, D1
+    ORI     #4, D1
 
 END
     RTS
+    
 RLLYEND
     END    START
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
