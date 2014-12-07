@@ -410,9 +410,26 @@ OP0001
         MOVE.B  #14,D0      * Trap #14 to print out
         TRAP    #15         * Perform Trap #14
         
+        *-----------------------------------------------------------
+        * the following code is to move the size bits into the
+        * 0-1 positions of D3 so that eahelper05 case use that as a "parameter"
+        * for eahelper05
+        
         MOVE.W  #12, D6              * Prep lower value for bitmask
         MOVE.W  #13, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
+        
+        AND     D2,D6
+        
+        LSR     #8,D6
+        LSR     #4,D6
+        
+        CLR     D3
+        
+        MOVE.B  D6,D3
+        
+        *---------------------------------------------------------------
+        
         
         BSR     SIZE67
         BSR     EAHELPER05
@@ -915,23 +932,50 @@ OP1000
         MOVE.B  #14,D0              * Trap #14 prints out the data
         TRAP    #15                 * Perform Trap #14
         
-        BSR     EAHELPER611         * Print out data. TODO: DOESN'T WORK
-        
-        LEA     COMMA,A1            * We found DIVS
-        MOVE.B  #14,D0              * Trap #14 prints out the data
+        LEA     SPACE,A1            * formatting
+        MOVE.B  #14,D0              * Trap #14 prints out space
         TRAP    #15                 * Perform Trap #14
         
-        BSR     EAHELPER05         * Print out data. TODO: DOESN'T WORK
+        CLR     D3                  * clear D5, it is a parameter of ea05 to indicate size
+        BSET    #0,D3               * in this case it is always word, so set the first bit of D3
+                                    * to indicate a potential immediate of size word
         
+        BSR     EAHELPER05          * Print out data. TODO: DOESN'T WORK.
+
+        LEA     COMMA,A1            * formatting
+        MOVE.B  #14,D0              * Trap #14 prints out a comma
+        TRAP    #15                 * Perform Trap #14
+        
+        *--------------------------------------------------------------------
+        * bit manipulation is needed to make the outlier DIVS work
+        * with the generic EAHELPER611
+        
+        BCLR    #6,D2
+        BCLR    #7,D2
+        BCLR    #8,D2
+        
+        * the above bits were cleared so that eahelper05 knows the destination
+        * is a data register.
+        
+        BSR     EAHELPER611         * Print out data. TODO: DOESN'T WORK
+                                    * it doesnt work because DIVS is an unusual op
+                                    * you need to do some bit manipulation to
+                                    * use the helpers, since they are generic
+                                    * and DIVS is a special case
+
         LEA     NEWLINE,A1          * We found DIVS
         MOVE.B  #14,D0              * Trap #14 prints out the data
         TRAP    #15                 * Perform Trap #14
+        
+        BRA     OP1000END
         
 NOTDIVS * It is confirmed OR at this point
         LEA     OROP,A1         * We found OR
         MOVE.B  #14,D0          * Trap #14 prints out the data
         TRAP    #15             * Perform Trap #14
-        
+        *================================================================
+        * todo, move the size of the operation into the leading bits of D5
+        * before subroutine call
         BSR     EAHELPER611
 
 OP1000END
@@ -1083,83 +1127,18 @@ OP1111
 * NAME:           EAHELPER611
 * DESCRIPTION:    a
 * PRE-CONDITION:  D2 contains the instruction to print modes for.
-*                 
-* POST-CONDITION: Determines mode, passes D2 to EAHELPER05 to print.
+*                 D5 contains the size of the data to be printed
+* POST-CONDITION: Determines if mode is direct, if it's not, passes D2 to 
+*                 EAHELPER05 to print.
 * REGISTERS:      a
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 EAHELPER611
     MOVEM  D0-D7/A0-A1,-(A7) * save stuff
     
-    MOVE.W  #0, D6              * Prep lower value for bitmask
-    MOVE.W  #2, D7              * Prep upper value for bitmask
+    MOVE.W  #6, D6              * Prep lower value for bitmask
+    MOVE.W  #8, D7              * Prep upper value for bitmask
     BSR     BITMASK             * Finalize bitmask setup
     AND     D2,D6               * Apply bitmask
-    
-    CMPI    #%0000000111000000,D6 * is it immediate?
-    BNE     NOTIMMEDIATE
-
-    CMPI    #1,D3 * is it a byte?
-    BNE     NOTIMMBYTE
-    
-    LEA     IMD,A1 *print out the '#' indicating an immediate value
-    MOVE.B  #14,D0
-    TRAP    #15
-    
-    MOVE.W  #0, D6              * Prep lower value for bitmask
-    MOVE.W  #7, D7              * Prep upper value for bitmask
-    BSR     BITMASK             * Finalize bitmask setup
-        
-    MOVE.W  (A2)+,D1
-    
-    AND     D6,D1
-        
-    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
-    TRAP    #15      * Perform Trap #3
-    
-    BRA     ENDEAHELPER05
-
-NOTIMMBYTE
-    
-    CMPI    #2,D3 * is it a word?
-    BNE     NOTIMMWORD
-    
-    LEA     IMD,A1 *print out the '#' indicating an immediate value
-    MOVE.B  #14,D0
-    TRAP    #15
-    
-    MOVE.W  #0, D6              * Prep lower value for bitmask
-    MOVE.W  #15, D7             * Prep upper value for bitmask
-    BSR     BITMASK             * Finalize bitmask setup
-        
-    MOVE.W  (A2)+,D1
-    
-    AND     D6,D1               * Apply bitmask
-        
-    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
-    TRAP    #15      * Perform Trap #3
-    
-    BRA     ENDEAHELPER05
-    
-NOTIMMWORD
-    CMPI    #3,D6 * is it a long?
-    BNE     NOTIMMEDIATE
-    
-    LEA     IMD,A1 *print out the '#' indicating an immediate value
-    MOVE.B  #14,D0
-    TRAP    #15
-        
-    MOVE.L  (A2)+,D1
-        
-    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
-    TRAP    #15      * Perform Trap #3
-    
-    MOVE.W  (A2)+,D1
-        
-    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
-    TRAP    #15      * Perform Trap #3
-    
-    BRA     ENDEAHELPER05
-
     
     * to move the mode where EAHELPER50 can process it
     MOVE.L  #6,D6
@@ -1196,6 +1175,8 @@ NOTIMMWORD
     
     BSR     EAHELPER05
     
+ENDEAHELPER611
+    
     MOVEM  (A7)+,D0-D7/A0-A1 * save stuff
     
     RTS
@@ -1218,8 +1199,6 @@ EAHELPER05
     * todo: add code for printing immediate values
     
     MOVEM   D0-D7/A0-A1,-(A7) * save stuff
-    
-    MOVE.L  D5,D3   * move the register containing the potential size into D3
     
     MOVE.L  #3,D6
     MOVE.L  #5,D7
@@ -1309,6 +1288,74 @@ NOTADRINDIRECTPOST * address register indirect, pre decrement
     BRA     ENDEAHELPER05
 
 NOTADRINDIRECTPRE * if none of the previous cases are true, it is a mode not supported by our decompiler
+
+    CMPI    #%0000000000111000,D6 * is it immediate?
+    BNE     NOTIMMEDIATE
+
+    CMPI    #1,D3 * is it a byte?
+    BNE     NOTIMMBYTE
+    
+    LEA     IMD,A1 *print out the '#' indicating an immediate value
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    MOVE.W  #0, D6              * Prep lower value for bitmask
+    MOVE.W  #7, D7              * Prep upper value for bitmask
+    BSR     BITMASK             * Finalize bitmask setup
+        
+    MOVE.W  (A2)+,D1
+    
+    AND.L     D6,D1
+        
+    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
+    TRAP    #15      * Perform Trap #3
+    
+    BRA     ENDEAHELPER05
+
+NOTIMMBYTE
+    
+    CMPI    #2,D3 * is it a word?
+    BNE     NOTIMMWORD
+    
+    LEA     IMD,A1 *print out the '#' indicating an immediate value
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    MOVE.W  #0, D6              * Prep lower value for bitmask
+    MOVE.W  #15, D7             * Prep upper value for bitmask
+    BSR     BITMASK             * Finalize bitmask setup
+        
+    MOVE.W  (A2)+,D1
+    
+    AND.L     D6,D1               * Apply bitmask
+        
+    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
+    TRAP    #15      * Perform Trap #3
+    
+    BRA     ENDEAHELPER05
+    
+NOTIMMWORD
+    CMPI    #3,D3 * is it a long?
+    BNE     NOTIMMEDIATE
+    
+    LEA     IMD,A1 *print out the '#' indicating an immediate value
+    MOVE.B  #14,D0
+    TRAP    #15
+        
+    MOVE.L  (A2)+,D1
+        
+    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
+    TRAP    #15      * Perform Trap #3
+    
+    MOVE.W  (A2)+,D1
+        
+    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
+    TRAP    #15      * Perform Trap #3
+    
+    BRA     ENDEAHELPER05
+
+NOTIMMEDIATE    
+
 
     BSR     UNKNOWNOP
     
@@ -2038,6 +2085,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
