@@ -770,15 +770,15 @@ OP0101
         
         BSR     EAHELPER05          * Print out the Effective Address
         
-        BRA     DONE0101            * Done identifying OP
+        LEA     NEWLINE,A1          * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out a comma
+        TRAP    #15                 * Perform Trap #14
+        
+        MOVEM   (A7)+,D0-D7/A0-A1   * Pop off the stack to return our registers
+        RTS
     
 UNKNOWN0101
-        MOVEM   (A7)+,D0-D7/A0-A1   * Pop off the stack to return our registers
         BSR     UNKNOWNOP
-        RTS
-        
-DONE0101
-        MOVEM   (A7)+,D0-D7/A0-A1   * Pop off the stack to return our registers
         RTS
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
@@ -1107,10 +1107,58 @@ OP1011
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1100
+        MOVEM   D0-D7/A0-A1,-(A7)   * Saving values to the stack
 
-    BSR     UNKNOWNOP
-    RTS
+        * Check if the EA Mode is 001 since MULS does not support it
+        MOVE.W  #3, D6              * Prep lower value for bitmask
+        MOVE.W  #5, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000000001000, D6    * Is the mode 001, an unsupported mode?
+        BEQ     UNKNOWN1100               * If so, the op is not supported
+        
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000111000000, D6  * Are we MULS?
+        BNE     UNKNOWN1100             * If not, it is an unknown op
+        
+        LEA     MULSOP,A1           * We found MULS
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+        LEA     SPACE,A1            * formatting
+        MOVE.B  #14,D0              * Trap #14 prints out space
+        TRAP    #15                 * Perform Trap #14
+        
+        CLR     D3                  * clear D3, it is a parameter
+        BSET    #0,D3               * of EAHELPER05 to indicate size
+        
+        BSR     EAHELPER05          * Print out data
 
+        LEA     COMMA,A1            * formatting
+        MOVE.B  #14,D0              * Trap #14 prints out a comma
+        TRAP    #15                 * Perform Trap #14
+        
+        BCLR    #6,D2               * Bit manipulation is 
+        BCLR    #7,D2               * necessary in order to make
+        BCLR    #8,D2               * EAHELPER611 work generically
+        
+        BSR     EAHELPER611         * Print out EA
+
+        LEA     NEWLINE,A1          * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+        MOVEM   (A7)+,D0-D7/A0-A1   * Done identifying op
+        RTS                         * Return to main
+        
+UNKNOWN1100
+        BSR     UNKNOWNOP
+        
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -1185,7 +1233,7 @@ OP1111
 * REGISTERS:      a
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 EAHELPER611
-    MOVEM  D0-D7/A0-A1,-(A7) * save stuff
+    MOVEM  D0-D7/A0-A1,-(A7)    * Push values onto stack
     
     MOVE.W  #6, D6              * Prep lower value for bitmask
     MOVE.W  #8, D7              * Prep upper value for bitmask
@@ -1193,44 +1241,35 @@ EAHELPER611
     AND     D2,D6               * Apply bitmask
     
     * to move the mode where EAHELPER50 can process it
-    MOVE.L  #6,D6
-    MOVE.L  #8,D7
-    
-    BSR     BITMASK * create bitmask
-    
-    AND     D2,D6   * apply bitmask
+    MOVE.L  #6,D6       * Prep lower value of bitmask
+    MOVE.L  #8,D7       * Prep upper value of bitmask
+    BSR     BITMASK     * Create bitmask
+    AND     D2,D6       * Apply bitmask
     
     CLR     D3      * prep D3 to store values
-    
     MOVE.W  D6,D3   * store bitmasked value in D3
-    
     LSR     #3,D3   * move bits 6-8 to 3-5
     
     * to move the register where EAHELPER50 can process it
-    MOVE.L  #9,D6   *prep registers to create bitmask
-    MOVE.L  #11,D7
-    
+    MOVE.L  #9,D6   * Prep lower value for bitmask
+    MOVE.L  #11,D7  * Prep upper value for bitmask
     BSR     BITMASK * create bitmask
-    
     AND     D2,D6   * apply bitmask
     
     CLR     D4      * prep D3 to store values
-    
     MOVE.W  D6,D4   * store bitmasked value in D3
     
     LSR     #8,D4   * move bits 9-11 to 0-2
     LSR     #1,D4   * move bits 9-11 to 0-2
-    
+  
     OR.L    D4,D3   * combind the register and mode
-    
     MOVE.L  D3,D2   * put the result in D2 so EAHELPER05 can process it
     
     BSR     EAHELPER05
     
 ENDEAHELPER611
     
-    MOVEM  (A7)+,D0-D7/A0-A1 * save stuff
-    
+    MOVEM  (A7)+,D0-D7/A0-A1    * Revert back
     RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -2120,6 +2159,7 @@ RTSOP       DC.B    'RTS',0
 SUBQOP      DC.B    'SUBQ',0
 LEAOP       DC.B    'LEA',0
 BCLROP      DC.B    'BCLR ',0
+MULSOP      DC.B    'MULS',0
 OROP        DC.B    'OR',0
 ORIOP       DC.B    'ORI',0
 CMPIOP      DC.B    'CMPI',0
@@ -2201,7 +2241,11 @@ __D7        DC.B   'D7',0
     JSR      END
     DIVS    #1, D0
     BCLR    D0, D1
-    SUBQ.L  #8, D1
+    MULS.W  #3, D7
+    MULS    D0, D7
+    MULS    (A1)+, D2
+    SUBQ    #8, D6
+    SUBQ.L  #7, D1
     ORI     #4, D1
     BRA     END
     BEQ     END
@@ -2214,6 +2258,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
