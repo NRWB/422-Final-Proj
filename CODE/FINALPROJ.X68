@@ -737,12 +737,50 @@ DONE0100
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0101
+        MOVEM   D0-D7/A0-A1,-(A7) * Push values to the stack to save
 
-    BSR     UNKNOWNOP
-    RTS
+        AND     #%0000000100000000, D6  * Baby-Bitmask for the 8th digit.
+        CMPI    #%0000000100000000, D6  * Is the 8th digit a 1?
+        BEQ     UNKNOWN0101             * If so, unknown op
+      
+        CMPI    #%0000000100000000, D6  * Is the size 11, an unsupported value?
+        BEQ     UNKNOWN0101             * If so, unknown op
+          
+        * Verified SUBQ at this point
+        LEA     SUBQOP,A1           * Print out SUBQ
+        MOVE.B  #14,D0              * Trap #14 to print out
+        TRAP    #15                 * Perform Trap #14
+                        
+        BSR     SIZE67              * Print out size
+        
+        LEA     IMD,A1              * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out space
+        TRAP    #15                 * Perform Trap #14
+        
+        MOVE.W  #9, D6              * Prep lower value for bitmask
+        MOVE.W  #11,D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        BSR     PRINTDATA911        * Special op for immediate in bits 9->11
+          
+        LEA     COMMA,A1            * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out a comma
+        TRAP    #15                 * Perform Trap #14
+        
+        BSR     EAHELPER05          * Print out the Effective Address
+        
+        BRA     DONE0101            * Done identifying OP
+    
+UNKNOWN0101
+        MOVEM   (A7)+,D0-D7/A0-A1   * Pop off the stack to return our registers
+        BSR     UNKNOWNOP
+        RTS
+        
+DONE0101
+        MOVEM   (A7)+,D0-D7/A0-A1   * Pop off the stack to return our registers
+        RTS
 
-* testing branching
-* op op op
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -1014,8 +1052,6 @@ OP1000END
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1001
 
-    BSR     UNKNOWNOP
-    RTS
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -1959,6 +1995,74 @@ INVALID_ASCII_INPUT
 PRINT_ASCII_FINISH
     MOVEM.L     (A7)+,D0-D7/A0-A5 * pop saved memory
     RTS
+    
+PRINTDATA911
+    CMPI    #%0000111000000000, D6   * Print 7
+    BEQ     PRINT7   
+    CMPI    #%0000110000000000, D6   * Print 6
+    BEQ     PRINT6
+    CMPI    #%0000101000000000, D6   * Print 5
+    BEQ     PRINT5
+    CMPI    #%0000100000000000, D6   * Print 4
+    BEQ     PRINT4 
+    CMPI    #%0000011000000000, D6   * Print 3
+    BEQ     PRINT3    
+    CMPI    #%0000010000000000, D6   * Print 2
+    BEQ     PRINT2   
+    CMPI    #%0000001000000000, D6   * Print 1
+    BEQ     PRINT1     
+    CMPI    #%0000000000000000, D6   * Print 0
+    BEQ     PRINT0
+    
+    RTS                             * Fail case  
+    
+PRINT7
+    LEA     ASCII_7, A1
+    MOVE.B      #14,D0
+    TRAP        #15
+    RTS
+    
+PRINT6
+    LEA     ASCII_6, A1
+    MOVE.B      #14,D0
+    TRAP        #15
+    RTS
+    
+PRINT5
+    LEA     ASCII_5, A1
+    MOVE.B      #14,D0
+    TRAP        #15
+    RTS
+    
+PRINT4
+    LEA     ASCII_4, A1
+    MOVE.B      #14,D0
+    TRAP        #15
+    RTS
+    
+PRINT3
+    LEA     ASCII_3, A1
+    MOVE.B      #14,D0
+    TRAP        #15
+    RTS
+    
+PRINT2
+    LEA     ASCII_2, A1
+    MOVE.B      #14,D0
+    TRAP        #15
+    RTS
+    
+PRINT1
+    LEA     ASCII_1, A1
+    MOVE.B      #14,D0
+    TRAP        #15
+    RTS
+        
+PRINT0
+    LEA     ASCII_0, A1
+    MOVE.B      #14,D0
+    TRAP        #15
+    RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -2013,6 +2117,7 @@ MOVEOP      DC.B    'MOVE',0
 MOVEMOP     DC.B    'MOVEM',0
 JSROP       DC.B    'JSR',0
 RTSOP       DC.B    'RTS',0
+SUBQOP      DC.B    'SUBQ',0
 LEAOP       DC.B    'LEA',0
 BCLROP      DC.B    'BCLR ',0
 OROP        DC.B    'OR',0
@@ -2096,6 +2201,7 @@ __D7        DC.B   'D7',0
     JSR      END
     DIVS    #1, D0
     BCLR    D0, D1
+    SUBQ.L  #4, D1
     ORI     #4, D1
     BRA     END
     BEQ     END
@@ -2108,6 +2214,8 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
+
 
 
 
