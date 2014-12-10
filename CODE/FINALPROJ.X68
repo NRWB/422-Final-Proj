@@ -2012,7 +2012,7 @@ PRINTDATA911
     CMPI    #%0000001000000000, D6   * Print 1
     BEQ     PRINT1     
     CMPI    #%0000000000000000, D6   * Print 0
-    BEQ     PRINT0
+    BEQ     PRINT8
     
     RTS                             * Fail case  
     
@@ -2058,8 +2058,8 @@ PRINT1
     TRAP        #15
     RTS
         
-PRINT0
-    LEA     ASCII_0, A1
+PRINT8
+    LEA     ASCII_8, A1
     MOVE.B      #14,D0
     TRAP        #15
     RTS
@@ -2201,7 +2201,7 @@ __D7        DC.B   'D7',0
     JSR      END
     DIVS    #1, D0
     BCLR    D0, D1
-    SUBQ.L  #4, D1
+    SUBQ.L  #8, D1
     ORI     #4, D1
     BRA     END
     BEQ     END
