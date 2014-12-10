@@ -1158,6 +1158,9 @@ OP1100
         
 UNKNOWN1100
         BSR     UNKNOWNOP
+     
+        MOVEM   (A7)+,D0-D7/A0-A1   * Done identifying op
+        RTS                         * Return to main
         
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -1196,7 +1199,211 @@ OP1101
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1110
 
-    BSR     UNKNOWNOP
+    MOVEM   D0-D7/A0-A1,-(A7)   * Caller saved
+
+    MOVE.L  #3,D6
+    MOVE.L  #4,D7
+    
+    BSR     BITMASK * generate a bitmask for the 3 and 4 bits
+    
+    AND.L   D2,D6
+    
+    CMPI    #%0000000000001000,D6 *is it a logical shift
+    BEQ     LS
+    
+    CMPI    #%0000000000000000,D6 *is it an arithmatic shift
+    BEQ     AS
+    
+    CMPI    #%0000000000011000,D6 *is it a rorate?
+    BEQ     RO
+
+    BSR     UNKNOWNOP *if nothing above, we don't know what it is
+    BRA     ENDOP1110
+    
+LS
+    MOVE.L  #8,D6
+    MOVE.L  #8,D7
+    
+    BSR     BITMASK
+    
+    AND.L   D2,D6
+    
+    CMPI    #0,D6 * is it a left shift?
+    BEQ     LSR
+    
+    BRA     LSL * if not a left shift, must be right
+
+LSL
+
+    LEA     LSLOP,A1            * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out LSL
+    TRAP    #15                 * Perform Trap #14
+    
+    BRA     OP1110GENERIC       * a generic part of OP1110 that
+                                * prints the registers and imm data
+LSR
+
+    LEA     LSROP,A1            * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out LSR
+    TRAP    #15                 * Perform Trap #14
+    
+    BRA     OP1110GENERIC       * a generic part of OP1110 that
+                                * prints the registers and imm data
+
+AS
+    MOVE.L  #8,D6
+    MOVE.L  #8,D7
+    
+    BSR     BITMASK
+    
+    AND.L   D2,D6
+    
+    CMPI    #0,D6 * is it a left shift?
+    BEQ     ASR
+    
+    BRA     ASL * if not a left shift, must be right
+    
+ASL
+
+    LEA     ASLOP,A1            * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out ASL
+    TRAP    #15                 * Perform Trap #14
+    
+    BRA     OP1110GENERIC       * a generic part of OP1110 that
+                                * prints the registers and imm data
+ASR
+
+    LEA     ASROP,A1            * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out ASR
+    TRAP    #15                 * Perform Trap #14
+    
+    BRA     OP1110GENERIC       * a generic part of OP1110 that
+                                * prints the registers and imm data
+RO
+    MOVE.L  #8,D6
+    MOVE.L  #8,D7
+    
+    BSR     BITMASK
+    
+    AND.L   D2,D6
+    
+    CMPI    #0,D6 * is it a left shift?
+    BEQ     ROR
+    
+    BRA     ROL * if not a left shift, must be right
+
+ROL
+
+    LEA     ROLOP,A1            * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out ROL
+    TRAP    #15                 * Perform Trap #14
+    
+    BRA     OP1110GENERIC       * a generic part of OP1110 that
+                                * prints the registers and imm data
+ROR
+
+    LEA     ROROP,A1            * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out ROR
+    TRAP    #15                 * Perform Trap #14
+    
+    BRA     OP1110GENERIC       * a generic part of OP1110 that
+                                * prints the registers and imm data
+
+OP1110GENERIC
+
+    BSR     SIZE67
+    
+    MOVE.L  #5,D6
+    MOVE.L  #5,D7
+    
+    BSR     BITMASK
+    
+    AND.L   D2,D6
+    
+    CMPI    #%0000000000100000,D6   *is it a data reg?
+    BEQ     OP1110DATAREG
+    
+    LEA     IMD,A1              * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out pound #
+    TRAP    #15                 * Perform Trap #14
+    
+    MOVE.L  #9,D6
+    MOVE.L  #11,D7
+    
+    BSR     BITMASK
+    
+    AND.L   D2,D6
+    
+    CMPI    #0,D6 * special case, if zero print #8 not #0
+    BEQ     OP1110IMMEIGHT
+    
+    LSR.L   #8,D6
+    LSR.L   #1,D6
+    
+    MOVE.L  D6,D1              * formatting
+    MOVE.B  #3,D0              * Trap #14 prints out the number in D1
+    TRAP    #15                * Perform Trap #14
+    
+    LEA     COMMA,A1            * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out comma
+    TRAP    #15                 * Perform Trap #1
+    
+    * in order to use the eahlpers, we need to do some bit manipulation
+    * clearing the bits below lets our helper know that the mode is Dn
+    BCLR    #3,D2
+    BCLR    #4,D2
+    BCLR    #5,D2
+    
+    BSR     EAHELPER05
+    
+    BRA     ENDOP1110
+    
+OP1110IMMEIGHT
+
+    MOVE.L  #8,D1              * formatting
+    MOVE.B  #3,D0              * Trap #14 prints out the number in D1
+    TRAP    #15                * Perform Trap #14
+    
+    LEA     COMMA,A1            * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out comma
+    TRAP    #15                 * Perform Trap #1
+    
+    * in order to use the eahlpers, we need to do some bit manipulation
+    * clearing the bits below lets our helper know that the mode is Dn
+    BCLR    #3,D2
+    BCLR    #4,D2
+    BCLR    #5,D2
+    
+    BSR     EAHELPER05
+    
+    BRA     ENDOP1110
+
+OP1110DATAREG
+
+    * in order to use the eahlpers, we need to do some bit manipulation
+    * clearing the bits below lets our helper know that the mode is Dn
+    BCLR    #3,D2
+    BCLR    #4,D2
+    BCLR    #5,D2
+    BCLR    #6,D2
+    BCLR    #7,D2
+    BCLR    #8,D2
+    
+    BSR     EAHELPER611
+    
+    LEA     COMMA,A1            * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out comma
+    TRAP    #15                 * Perform Trap #14
+    
+    BSR     EAHELPER05
+
+ENDOP1110
+
+    LEA     NEWLINE,A1          * formatting
+    MOVE.B  #14,D0              * Trap #14 prints out a new line
+    TRAP    #15                 * Perform Trap #14
+    
+    MOVEM   (A7)+,D0-D7/A0-A1   * Caller saved
     RTS
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
@@ -2163,6 +2370,12 @@ MULSOP      DC.B    'MULS',0
 OROP        DC.B    'OR',0
 ORIOP       DC.B    'ORI',0
 CMPIOP      DC.B    'CMPI',0
+LSLOP       DC.B    'LSL',0
+LSROP       DC.B    'LSR',0
+ASLOP       DC.B    'ASL',0
+ASROP       DC.B    'ASR',0
+ROLOP       DC.B    'ROL',0
+ROROP       DC.B    'ROR',0
 DATA        DC.B    ' DATA $',0
 OP_BCC_MSG  DC.B    'BCC ',0
 OP_BCS_MSG  DC.B    'BCS ',0
@@ -2247,6 +2460,12 @@ __D7        DC.B   'D7',0
     SUBQ    #8, D6
     SUBQ.L  #7, D1
     ORI     #4, D1
+    LSL.L   #1,D1
+    LSR.L   #2,D1
+    ASL.L   #3,D1
+    ASR.L   #4,D1
+    ROL.L   #5,D1
+    ROR.L   #8,D1
     BRA     END
     BEQ     END
 
@@ -2258,6 +2477,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
