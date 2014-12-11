@@ -538,24 +538,163 @@ NOTNEG *MOVEM
         
         BSR     BITMASK
         
-        AND     D2,D6   * apply bitmask
+        AND.L   D2,D6   * apply bitmask
         
         CMPI    #%0000000010000000,D6 * is it MOVEM?
         BNE     NOTMOVEM          * it is not MOVEM
         
-        * make sure it is a valid size and mode for MOVEM
+        MOVE.L  #8,D6
+        MOVE.L  #8,D7
         
-        * it is MOVEM
+        BSR     BITMASK
+        
+        AND.L   D2,D6
+        
+        CMPI    #%0000000100000000,D6 * is it register to memory?
+        BEQ     MOVEMTOMEM 
+        
+MOVEMTOREG *supported modes: 010 011
+
+        MOVE.L  #3,D6
+        MOVE.L  #5,D7
+        
+        BSR     BITMASK
+        
+        AND.L   D2,D6
+        
+        CMPI    #%0000000000000000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        CMPI    #%0000000000001000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        CMPI    #%0000000000100000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        CMPI    #%0000000000101000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        CMPI    #%0000000000110000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        CMPI    #%0000000000111000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
         LEA     MOVEMOP,A1
-        MOVE.B  #13,D0          * Print a newline
+        MOVE.B  #14,D0          * print MOVEM
         TRAP    #15
         
-        * probably needs its own special code for printing the rest due to uniqueness of movem
+        MOVE.L  #6,D6
+        MOVE.L  #6,D7
         
-        MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+        BSR     BITMASK
         
+        AND.L   D2,D6
+        
+        CMPI    #%0000000001000000,D6 * is it a long op?
+        BNE     NOTLONGMOVEM1       * no, it is a word
+        
+        LEA     __L,A1
+        MOVE.B  #14,D0          * print .L 
+        TRAP    #15
+        
+        BRA     SKIPNOTLONG1
+        
+NOTLONGMOVEM1
+
+        LEA     __W,A1
+        MOVE.B  #14,D0          * print .W 
+        TRAP    #15
+                
+SKIPNOTLONG1
+
+        BSR     EAHELPER05 * print out the register we are moving from
+        
+        LEA     COMMA,A1
+        MOVE.B  #14,D0          * print , 
+        TRAP    #15
+        
+        BSR     MOVEMHELPERPOST
+        
+        MOVE.W  (A2)+,D2
+        
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0          * print a newline 
+        TRAP    #15
+    
         BRA     DONE0100          * we found and printed, move on to the next iteration
         
+MOVEMTOMEM * supported modes 010 100
+
+        MOVE.L  #3,D6
+        MOVE.L  #5,D7
+        
+        BSR     BITMASK
+        
+        AND.L   D2,D6
+        
+        CMPI    #%0000000000000000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        CMPI    #%0000000000001000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        CMPI    #%0000000000011000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        CMPI    #%0000000000101000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        CMPI    #%0000000000110000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        CMPI    #%0000000001110000,D6 * is it an unsopported mode?
+        BEQ     UNKNOWN0100
+        
+        LEA     MOVEMOP,A1
+        MOVE.B  #14,D0          * print MOVEM
+        TRAP    #15
+        
+        MOVE.L  #6,D6
+        MOVE.L  #6,D7
+        
+        BSR     BITMASK
+        
+        AND.L   D2,D6
+        
+        CMPI    #%0000000001000000,D6 * is it a long op?
+        BNE     NOTLONGMOVEM2       * no, it is a word
+        
+        LEA     __L,A1
+        MOVE.B  #14,D0          * print .L 
+        TRAP    #15
+        
+        BRA     SKIPNOTLONG2
+        
+NOTLONGMOVEM2
+
+        LEA     __W,A1
+        MOVE.B  #14,D0          * print .W 
+        TRAP    #15
+                
+SKIPNOTLONG2
+
+        BSR     MOVEMHELPERPRE
+
+        LEA     COMMA,A1
+        MOVE.B  #14,D0          * print , 
+        TRAP    #15
+        
+        BSR     EAHELPER05 * print out the register we are moving to
+        
+        MOVE.W  (A2)+,D2
+        
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0          * print a newline 
+        TRAP    #15
+    
+        BRA     DONE0100          * we found and printed, move on to the next iteration
+
 NOTMOVEM *JSR
         * prep values for BITMASK subroutine
         MOVE.L  #6,D6
@@ -656,7 +795,7 @@ NOTRTS  *LEA
         BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
         
         CMPI    #%0000000000111000,D6
-        BEQ     TWOWORDLEA          * it's not LEA, we dont know what it is
+        BEQ     TWOWORDLEA          * it's a two word LEA
         
         * check to make sure it is a supported mode and size
         
@@ -2081,6 +2220,248 @@ PRINTLONG
 
 *-----------------------------------------------------------------------------
 *-----------------------------------------------------------------------------
+* NAME:           MOVEMHELPERPOST
+* DESCRIPTION:    Deciphers the myriad of combinations possible for MOVEM
+* PRE-CONDITION:  A2 points to the second word of the MOVEM op
+* POST-CONDITION: The registers being saved are printed
+* REGISTERS:      A2
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+MOVEMHELPERPOST
+        MOVEM  D0-D7/A0-A6,-(A7)
+        
+        CLR.L   D5  * to be used as a loop counter
+        CLR.L   D4  * == 1 if we have printed any registers (for fencepost issue)
+        CLR.L   D3  * == 1 if we are in a range
+        CLR.L   D6  * == 1 if we have already printed the slash or dash
+        CLR.L   D7  * == counts the number of registers in a range
+        MOVE.B  #1,D6 * to fix fencepost issue
+        CLR.L   D2
+        MOVE.W  (A2),D2
+        
+DLOOP * loop to print out the data register portion of the addresses being saved
+
+        ROR     #1,D2
+        BCS     DVALID
+        
+        BRA     DINVALID
+        
+DVALID
+        CMPI    #0,D3
+        BEQ     DFORWARDVALID * we are not in a range
+        
+        ADDI    #1,D7 *increment number of regs in range
+        
+        CMPI    #1,D6   *have we already printed a symbol?
+        BEQ     DLOOPITER
+        
+        LEA     DASH,A1    *print a dash
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        MOVE.B  #1,D6 * indicates a symbol has been printed
+        
+        BRA     DLOOPITER
+        
+DFORWARDVALID
+        * not in a range yet, print
+        
+        CMPI    #0,D4
+        BEQ     DNOSLASH
+                
+        LEA     SLASH,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+DNOSLASH
+
+        MOVE.B  #1,D4 * we have printed something, now slashes are fair game
+        
+        MOVE.B  #1,D6   * we have printed a symbol
+        
+        LEA     ASCII_D,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        MOVE.L  D5,D1
+        MOVE.B  #3,D0
+        TRAP    #15
+
+        MOVE.B  #1,D3   * set to 1 to indicate we are in a range
+        MOVE.B  #0,D6   * set to 0 to indicate we have not printed a symbol
+        
+        BRA     DLOOPITER
+
+
+DINVALID
+
+        * were we in a range? if so, print last register, set D3 to zero branch to next iteration also set D6 to 0
+        
+        CMPI    #1,D3
+        BNE     DLOOPITER
+        
+        MOVE.B  #0,D3
+        
+        CMPI    #1,D7
+        BLT     DLOOPITERCLR
+        
+        LEA     ASCII_D,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        MOVE.L  D5,D1
+        
+        ADDI    #-1,D1 * print out previous reg #, it was the last in the range
+        
+        MOVE.B  #3,D0
+        TRAP    #15
+        
+        BRA     DLOOPITER
+        
+DLOOPITERCLR        
+        CLR.L   D7
+
+DLOOPITER
+        
+        CMPI    #8,D5
+        BEQ     DLOOPDONE
+
+        ADDI    #1,D5
+        BRA     DLOOP
+
+DLOOPDONE
+
+        MOVE.L  #9,D5  * to be used as a loop counter
+        CLR.L   D3  * == 1 if we are in a range
+        CLR.L   D6  * == 1 if we have already printed the slash or dash
+        CLR.L   D7  * count of registers in a range
+        MOVE.B  #1,D6 * to fix fencepost issue     
+
+ALOOP * loop to print out the data register portion of the addresses being saved
+
+        ROR     #1,D2
+        BCS     AVALID
+        
+        BRA     AINVALID
+        
+AVALID
+        CMPI    #0,D3
+        BEQ     AFORWARDVALID * we are not in a range
+        
+        ADDI    #1,D7 *increment number of regs in range
+        
+        CMPI    #1,D6   *have we already printed a symbol?
+        BEQ     ALOOPITER
+        
+        LEA     DASH,A1    *print a dash
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        MOVE.B  #1,D6 * indicates a symbol has been printed
+        
+        BRA     ALOOPITER
+        
+AFORWARDVALID
+        * not in a range yet, print
+        
+                
+        CMPI    #0,D4
+        BEQ     ANOSLASH
+                
+        LEA     SLASH,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+ANOSLASH
+
+        MOVE.B  #1,D4   * we have printed something, now slashes are fair game
+        
+        MOVE.B  #1,D6   * we have printed a symbol
+        
+        LEA     ASCII_A,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        MOVE.L  D5,D1
+        
+        ADDI    #-8,D1 * it's A, need to adjust by 8
+        
+        MOVE.B  #3,D0
+        TRAP    #15
+
+        MOVE.B  #1,D3   * set to 1 to indicate we are in a range
+        MOVE.B  #0,D6   * set to 0 to indicate we have not printed a symbol
+        
+        BRA     ALOOPITER
+
+
+AINVALID
+
+        * were we in a range? if so, print last register, set D3 to zero branch to next iteration also set D6 to 0
+        
+        CMPI    #1,D3
+        BNE     ALOOPITER
+        
+        MOVE.B  #0,D3
+        
+        CMPI    #1,D7
+        BLT     ALOOPITERCLR
+        
+        LEA     ASCII_A,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        MOVE.L  D5,D1
+        
+        ADDI    #-1,D1 * print out previous reg #, it was the last in the range
+        ADDI    #-8,D1 * it's A, need to adjust by 8
+        
+        MOVE.B  #3,D0
+        TRAP    #15
+        
+        BRA     ALOOPITER
+        
+ALOOPITERCLR
+        
+        CLR.L   D7
+
+ALOOPITER
+        
+        CMPI     #16,D5
+        BEQ     ALOOPDONE
+
+        ADDI    #1,D5
+        BRA     ALOOP
+
+ALOOPDONE
+        
+        MOVEM    (A7)+,D0-D7/A0-A6
+        RTS
+
+        
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
+* NAME:           MOVEMHELPERPRE
+* DESCRIPTION:    Deciphers the myriad of combinations possible for MOVEM
+* PRE-CONDITION:  A2 points to the second word of the MOVEM op
+* POST-CONDITION: The registers being saved are printed
+* REGISTERS:      A2
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+MOVEMHELPERPRE
+
+        
+*------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
+*-----------------------------------------------------------------------------
+
+
+
+*-----------------------------------------------------------------------------
+*-----------------------------------------------------------------------------
 * NAME:           UNKNOWNOP
 * DESCRIPTION:    a
 * PRE-CONDITION:  D2 contains the instruction to print. D2 has already been
@@ -2423,6 +2804,8 @@ OBRACK      DC.B    '(',0
 CBRACK      DC.B    ')',0
 PLUS        DC.B    '+',0
 MINUS       DC.B    '-',0
+SLASH       DC.B    '/',0
+DASH        DC.B    '-',0
 * ---> B/W/L (BYTE, WORD, LONG, RESPECTIVELY)
 __B         DC.B    '.B ',0
 __W         DC.B    '.W ',0
@@ -2462,7 +2845,7 @@ __D7        DC.B   'D7',0
     MOVE.B   #%10011010, D0
     MOVE.B   #%10101001, D1
     ADD.B    D0,D1
-    MOVEM    D1,-(A7)
+    MOVEM    (A7)+,A2-A5/D1/D3-D4
     LEA      JSROP,A1
     NEG.W    -(A7)
     JSR      END
@@ -2491,6 +2874,9 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
+
+
 
 
 
