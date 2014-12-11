@@ -228,19 +228,17 @@ OP0000
         BSR     BITMASK             * Finalize bitmask setup
         AND     D2,D6               * Apply bitmask
         
-        * TODO: Consider static  AND dynamic BCLR.
-        * Only works for Dynamic right now
-        CMPI    #%0000000110000000, D6  * Are we BCLR?
-        BNE     NOTBCLR                 * If not, branch to other OP0000 functions
+        CMPI    #%0000000110000000, D6  * Are we BCLR Dynamic?
+        BNE     NOTBCLRDYNA             * If not, branch to BCLR Static or other ops
         
+        * Checking for unsupported mode
         MOVE.W  #3, D6              * Prep lower value for bitmask
         MOVE.W  #5, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
         AND     D2,D6               * Apply bitmask
         
-        * Checking for unsupported mode
         CMPI    #%0000000000001000, D6  * Is the mode An, an unsupported mode?
-        BEQ     UNKNOWN0000             * If so, branch to other OP0000 functions
+        BEQ     UNKNOWN0000             * If so, the op is unknown
         
         * Confirmed BCLR at this point
         LEA     BCLROP,A1           * We found BCLR
@@ -272,6 +270,49 @@ OP0000
         TRAP    #15                 * Perform Trap #14
         
         BRA     END0000             * Found the op, move to next iteration
+        
+NOTBCLRDYNA
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #11, D7             * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000100010000000, D6  * Are we BCLR Static?
+        BNE     NOTBCLR                 * If not, branch to other functions
+        
+        * Checking for unsupported mode
+        MOVE.W  #3, D6              * Prep lower value for bitmask
+        MOVE.W  #5, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000000001000, D6  * Is the mode An, an unsupported mode?
+        BEQ     UNKNOWN0000             * If so, the op is unknown
+        
+        * Confirmed BCLR Static at this point
+        LEA     BCLROP,A1           * We found BCLR
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+
+        LEA     SPACE,A1            * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out space
+        TRAP    #15                 * Perform Trap #14
+        
+        MOVE.L  D2, D4              * Saving values
+                
+        LEA     IMD, A1             * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+        * Grab next word
+        MOVE.W (A2)+, D5            * Move the pointer, and store it in D3
+        LSL.L   #8, D5              * LSL for first nibble of the word
+        LSL.L   #8, D5              * LSL for second nibble of the word
+        MOVE.L  D5, A6              * Store D5 into A6, to be used as parameter
+        MOVE.L  #4, D3              * Four most significant bits in D3
+        BSR     PRINT_ASCII_HEX_CHAR    * Perform number print out
+
+        BRA     SKIPLONG            * Formatting, returning saved values, etc.
         
 NOTBCLR * Possible options left are ORI or CMPI
         MOVE.W  #9, D6              * Prep lower value for bitmask
@@ -306,45 +347,44 @@ NOTBCLR * Possible options left are ORI or CMPI
         TRAP    #15                 * Perform Trap #14
         
         BSR     SIZE67              * Print the size
-        
+
         * Mode check to see the size
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #7, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
         AND     D2,D6               * Apply bitmask
         
-        MOVE.L  D2, D4              * Saving stuff
+        MOVE.L  D2, D4              * Saving value
                 
         LEA     IMD, A1             * Formatting
         MOVE.B  #14,D0              * Trap #14 prints out the data
         TRAP    #15                 * Perform Trap #14
-        
+               
         * Grab immediate data
         MOVE.W (A2)+, D5            * Move the pointer, and store it in D3
-        LSL.L   #8, D5
+        LSL.L   #8, D5               
         LSL.L   #8, D5
         MOVE.L  D5, A6
         MOVE.L  #4, D3
         BSR     PRINT_ASCII_HEX_CHAR
 
-        
         CMPI    #%0000000010000000, D6   * See if the size is a LONG
         BNE     SKIPLONG    
         
         * Grab next word
         MOVE.W (A2)+, D5            * Move the pointer, and store it in D3
-        LSL.L   #8, D5
-        LSL.L   #8, D5
-        MOVE.L  D5, A6
-        MOVE.L  #4, D3
-        BSR     PRINT_ASCII_HEX_CHAR
+        LSL.L   #8, D5              * LSL to get first nibble of the word
+        LSL.L   #8, D5              * LSL to get second nibble of the word
+        MOVE.L  D5, A6              * Store D5 into A6 as a parameter
+        MOVE.L  #4, D3              * Move #4 into D3 to show four bits
+        BSR     PRINT_ASCII_HEX_CHAR    * Perform number output
 
 SKIPLONG
         LEA     COMMA, A1           * Formatting
         MOVE.B  #14,D0              * Trap #14 prints out the data
         TRAP    #15                 * Perform Trap #14
         
-        MOVE.L  D4, D2          * Return stuff
+        MOVE.L  D4, D2              * Return saved value
         
         BSR     EAHELPER05          * Print out the EA
         
@@ -354,15 +394,15 @@ SKIPLONG
         
         BRA     END0000             * Done with op. Move to next iteration
 
-        
 NOTORI  * Possible option left is CMPI
+
         CMPI    #%0000110000000000, D6  * Are we CMPI?
         BNE     UNKNOWN0000             * If not, unknown op
         
         * TODO: Continue checking for CMPI validity
         
 UNKNOWN0000
-        BSR     UNKNOWNOP       * Unknown op
+        BSR     UNKNOWNOP          * Unknown op
         
 END0000          
        MOVEM   (A7)+,D0-D7/A0-A1   * Push values to the stack to save
@@ -3066,7 +3106,10 @@ __D7        DC.B   'D7',0
     ASR.L   #4,D1
     ROL.L   #5,D1
     ROR.L   #8,D1
+    BCLR    #2,D1
     ADDA.W  D1,A5
+    ADD.B   D3, D4
+    BGE     END
     BRA     END
 
 END
@@ -3077,6 +3120,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
