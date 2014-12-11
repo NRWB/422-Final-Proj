@@ -562,22 +562,22 @@ MOVEMTOREG *supported modes: 010 011
         
         AND.L   D2,D6
         
-        CMPI    #%0000000000000000,D6 * is it an unsopported mode?
+        CMPI    #%0000000000000000,D6 * is it an unsupported mode?
         BEQ     UNKNOWN0100
         
-        CMPI    #%0000000000001000,D6 * is it an unsopported mode?
+        CMPI    #%0000000000001000,D6 * is it an unsupported mode?
         BEQ     UNKNOWN0100
         
-        CMPI    #%0000000000100000,D6 * is it an unsopported mode?
+        CMPI    #%0000000000100000,D6 * is it an unsupported mode?
         BEQ     UNKNOWN0100
         
-        CMPI    #%0000000000101000,D6 * is it an unsopported mode?
+        CMPI    #%0000000000101000,D6 * is it an unsupported mode?
         BEQ     UNKNOWN0100
         
-        CMPI    #%0000000000110000,D6 * is it an unsopported mode?
+        CMPI    #%0000000000110000,D6 * is it an unsupported mode?
         BEQ     UNKNOWN0100
         
-        CMPI    #%0000000000111000,D6 * is it an unsopported mode?
+        CMPI    #%0000000000111000,D6 * is it an unsupported mode?
         BEQ     UNKNOWN0100
         
         LEA     MOVEMOP,A1
@@ -889,7 +889,7 @@ DONE0100
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0101
-        MOVEM   D0-D7/A0-A1,-(A7) * Push values to the stack to save
+        MOVEM   D0-D7/A0-A1,-(A7)       * Push values to the stack to save
 
         AND     #%0000000100000000, D6  * Baby-Bitmask for the 8th digit.
         CMPI    #%0000000100000000, D6  * Is the 8th digit a 1?
@@ -2874,6 +2874,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 

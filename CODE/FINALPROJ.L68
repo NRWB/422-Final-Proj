@@ -1,6 +1,6 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.15.02
-Created On: 12/10/2014 11:54:43 PM
+Created On: 12/11/2014 10:20:34 AM
 
 00000000                             1  *    666
 00000000                             2  *   66 66
@@ -566,22 +566,22 @@ Created On: 12/10/2014 11:54:43 PM
 00001372                           562          
 00001372  CC82                     563          AND.L   D2,D6
 00001374                           564          
-00001374  0C46 0000                565          CMPI    #%0000000000000000,D6 * is it an unsopported mode?
+00001374  0C46 0000                565          CMPI    #%0000000000000000,D6 * is it an unsupported mode?
 00001378  6700 0276                566          BEQ     UNKNOWN0100
 0000137C                           567          
-0000137C  0C46 0008                568          CMPI    #%0000000000001000,D6 * is it an unsopported mode?
+0000137C  0C46 0008                568          CMPI    #%0000000000001000,D6 * is it an unsupported mode?
 00001380  6700 026E                569          BEQ     UNKNOWN0100
 00001384                           570          
-00001384  0C46 0020                571          CMPI    #%0000000000100000,D6 * is it an unsopported mode?
+00001384  0C46 0020                571          CMPI    #%0000000000100000,D6 * is it an unsupported mode?
 00001388  6700 0266                572          BEQ     UNKNOWN0100
 0000138C                           573          
-0000138C  0C46 0028                574          CMPI    #%0000000000101000,D6 * is it an unsopported mode?
+0000138C  0C46 0028                574          CMPI    #%0000000000101000,D6 * is it an unsupported mode?
 00001390  6700 025E                575          BEQ     UNKNOWN0100
 00001394                           576          
-00001394  0C46 0030                577          CMPI    #%0000000000110000,D6 * is it an unsopported mode?
+00001394  0C46 0030                577          CMPI    #%0000000000110000,D6 * is it an unsupported mode?
 00001398  6700 0256                578          BEQ     UNKNOWN0100
 0000139C                           579          
-0000139C  0C46 0038                580          CMPI    #%0000000000111000,D6 * is it an unsopported mode?
+0000139C  0C46 0038                580          CMPI    #%0000000000111000,D6 * is it an unsupported mode?
 000013A0  6700 024E                581          BEQ     UNKNOWN0100
 000013A4                           582          
 000013A4  43F9 0000229B            583          LEA     MOVEMOP,A1
@@ -893,7 +893,7 @@ Created On: 12/10/2014 11:54:43 PM
 000015FE                           889  * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 000015FE                           890  *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 000015FE                           891  OP0101
-000015FE  48A7 FFC0                892          MOVEM   D0-D7/A0-A1,-(A7) * Push values to the stack to save
+000015FE  48A7 FFC0                892          MOVEM   D0-D7/A0-A1,-(A7)       * Push values to the stack to save
 00001602                           893  
 00001602  CC7C 0100                894          AND     #%0000000100000000, D6  * Baby-Bitmask for the 8th digit.
 00001606  0C46 0100                895          CMPI    #%0000000100000000, D6  * Is the 8th digit a 1?
