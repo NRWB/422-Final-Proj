@@ -578,14 +578,14 @@ NOTNEG *MOVEM
         CMPI    #%0000000010000000,D6 * is it MOVEM?
         BNE     NOTMOVEM          * it is not MOVEM
         
-        MOVE.L  #8,D6
-        MOVE.L  #8,D7
+        MOVE.L  #10,D6
+        MOVE.L  #10,D7
         
         BSR     BITMASK
         
         AND.L   D2,D6
         
-        CMPI    #%0000000100000000,D6 * is it register to memory?
+        CMPI    #%0000000000000000,D6 * is it register to memory?
         BEQ     MOVEMTOMEM 
         
 MOVEMTOREG *supported modes: 010 011
@@ -909,7 +909,8 @@ DONE0100
         
         BRA     ITERATION
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
-*-----------------------------------------------------------------------------        
+*-----------------------------------------------------------------------------
+      
         
         
 
@@ -2603,6 +2604,7 @@ ALOOPDONE
 
 
 
+*-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 *-----------------------------------------------------------------------------
 *-----------------------------------------------------------------------------
 * NAME:           MOVEMHELPERPRE
@@ -2612,6 +2614,43 @@ ALOOPDONE
 * REGISTERS:      A2
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 MOVEMHELPERPRE
+
+    MOVEM   D1-D7,-(A7)
+
+    MOVE.W  (A2),D2 * move the data we need to proccess into D2
+    MOVE.L  #0,D4
+    CLR.L    D7 * put the flipped bits here
+    
+    *the following block of code moves bits
+    *into the same position they would be in if
+    *the MOVEM was post inc, then simply uses post
+    *inc to print the registers being saved
+PRELOOP
+    ROL.W   #1,D2
+    
+    BCS     PRESETBIT
+    BRA     PRELOOPITER
+    
+PRESETBIT
+    BSET    D4,D7
+
+PRELOOPITER
+    CMPI    #15,D4
+    BEQ     PRELOOPDONE
+    
+    ADDI    #1,D4
+    BRA     PRELOOP
+
+PRELOOPDONE
+
+    MOVE.W  D7,(A2)    
+    MOVEM   (A7)+,D1-D7
+
+    BSR MOVEMHELPERPOST
+
+    RTS
+
+
 
         
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
@@ -3038,6 +3077,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
