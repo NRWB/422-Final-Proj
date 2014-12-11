@@ -972,114 +972,78 @@ UNKNOWN0101
 *                Greater Than     -    GT    - 1110
 *                Less or Equal    -    LE    - 1111
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
-OP0110
-        MOVEM       D0-D1/A0-A1,-(A7) * Save main method routine vars to stack
-        
-        * Ready four bits to help distinguish op's with the 0110 prefix
-        MOVE.W  #0,D6                 * Move in 0 to D6 (first arg for the
-                                      * BITMASK sub-routine call)
-        MOVE.W  #7,D7                 * Move in 7 to D7 (second arg for the
-                                      * BITMASK sub-routine call)
+OP0110  MOVEM.L D0-D7/A0-A6,-(A7) * Save main method routine vars to stack
+                        
+        MOVE.W  #9,D6  * Move in 9 to D6
+        MOVE.W  #11,D7 * Move in 11 to D7
                                       
-        * The BITMASK call uses D6 as start bit, D7 as ending bit to mask
-        BSR     BITMASK               * Call BITMASK sub-routine
-                                      * Returns a bitmask in D6
-        
-        AND     D2,D6                 * And the index op, which was pre-loaded
-                                      * in the main memory loop with the bitmask
-                                      * to use to determine what case we need.
-        
-        * Analyze the 8-bit offset in the instruction for a value of $00 or $FF.
-        * $00 == word offset, $FF == long offset
-     ***CMPI    #%0000000000000000,D6
-     ***BEQ     BCC_WORD_OFFSET * or maybe flag a mark to grab when printing...?
-     ***
-     ***CMPI    #%0000000011111111,D6
-     ***BEQ     BCC_LONG_OFFSET * or maybe flag a mark to grab when printing...?
-        
-        * IF PASSED BOTH CMPI CHECKS (ABOVE),
-        * THEN THERE IS A 8-BIT OFFSET (NO EXTRA GRABS FROM MEMORY)
-        
-        MOVE.W  #9,D6  * Move in 9 to D6 (1st arg for the BITMASK sub-routine call)
-        MOVE.W  #11,D7 * Move in 11 to D7 (2nd arg for the BITMASK sub-routine call)
-                                      
-        * The BITMASK call uses D6 as start bit, D7 as ending bit to mask
         BSR     BITMASK * Call BITMASK sub-routine, Returns a bitmask in D6
         AND     D2,D6   * apply the BITMASK
         
-        * CASE 1: BCC - BINARY FOR "CARRY CLEAR" FLAG
-        CMPI    #%0000010000000000,D6
+        CMPI    #%0000010000000000,D6 * CASE 1: BCC - BINARY FOR "CARRY CLEAR" FLAG
         BEQ     OP_BCC
-        
-        * CASE 2: BCS - BINARY FOR "CARRY SET" FLAG
-        CMPI    #%0000010100000000,D6
+        CMPI    #%0000010100000000,D6 * CASE 2: BCS - BINARY FOR "CARRY SET" FLAG
         BEQ     OP_BCS
-        
-        * CASE 3: BGE - BINARY FOR "GREATER OR EQUAL" FLAG
-        CMPI    #%0000110000000000,D6
+        CMPI    #%0000110000000000,D6 * CASE 3: BGE - BINARY FOR "GREATER OR EQUAL" FLAG
         BEQ     OP_BGE
-        
-        * CASE 4: BLT - BINARY FOR "LESS THAN" FLAG
-        CMPI    #%0000110100000000,D6
+        CMPI    #%0000110100000000,D6 * CASE 4: BLT - BINARY FOR "LESS THAN" FLAG
         BEQ     OP_BLT
-        
-        * CASE 5: BVC - BINARY FOR "OVERFLOW CLEAR" FLAG
-        CMPI    #%0000100000000000,D6
+        CMPI    #%0000100000000000,D6 * CASE 5: BVC - BINARY FOR "OVERFLOW CLEAR" FLAG
         BEQ     OP_BVC
-        
-        * CASE 6: BRA - BINARY FOR "BRANCH ALWAYS" FLAG
-        * NOTE: A branch to the immediately following instruction automatically
-        *       uses the 16-bit displacement format because the 8-bit displacement
-        *       field contains $00 zero offset
-        * http://68k.hax.com/BRA
-        * NOTE2 ---> Does this mean, there should be no checks when debugging
-        *            for word/long offsets?
-        CMPI    #%0000000000000000,D6
+        CMPI    #%0000000000000000,D6 * CASE 6: BRA - BINARY FOR "BRANCH ALWAYS" FLAG
         BEQ     OP_BRA
-        
-        * CASE OTHER: ADDITIONAL FLAGS ALLOWED TO SIMPLY BE "RAW DATA OPS"
-        ; call raw data print out sub routine
+        BSR     UNKNOWNOP             * don't know what it is, print it out, skip to end
+        BRA     BCC_END
 
-OP_BCC
-        LEA     OP_BCC_MSG,A1
+OP_BCC  LEA     OP_BCC_MSG,A1
         BRA     OP_BRANCHES_PRINT
-OP_BCS
-        LEA     OP_BCS_MSG,A1
+OP_BCS  LEA     OP_BCS_MSG,A1
         BRA     OP_BRANCHES_PRINT
-OP_BGE
-        LEA     OP_BGE_MSG,A1
+OP_BGE  LEA     OP_BGE_MSG,A1
         BRA     OP_BRANCHES_PRINT
-OP_BLT
-        LEA     OP_BLT_MSG,A1
+OP_BLT  LEA     OP_BLT_MSG,A1
         BRA     OP_BRANCHES_PRINT
-OP_BVC
-        LEA     OP_BVC_MSG,A1
+OP_BVC  LEA     OP_BVC_MSG,A1
         BRA     OP_BRANCHES_PRINT
-OP_BRA
-        LEA     OP_BRA_MSG,A1
+OP_BRA  LEA     OP_BRA_MSG,A1
         BRA     OP_BRANCHES_PRINT
-
-* NEED TO ADD CHECK FOR EATING ANOTHER WORD/LONG
-        * need to take an extra word/long offset, given $00 or $FF read from the 8-bit offset?
-        * assemble output to console
 OP_BRANCHES_PRINT
-        MOVE.B  #14,D0 * print instruction op
+        MOVE.B  #14,D0 * print instruction op, chosen from cases directly above
         TRAP    #15
         
-		LEA		DATA,A1
+		LEA		DOLLAR,A1
 		MOVE.B	#14,D0 * print raw data hex of the LABEL
 		TRAP	#15
 		
-        MOVE.B  (A2)+,D5 * move 8 bit label addr into d5 and advance main memory program pointer too
-        MOVE.L  D5,A4 * ready the 8bits into a4
-        LEA     (A4),A1 * ready the a4 into a1 for print
-        MOVE.B  #14,D0 * print the 8bit addr
+        MOVE.W  #0,D6                 * Move in 0 to D6 - prep mask
+        MOVE.W  #7,D7                 * Move in 7 to D7
+        BSR     BITMASK               * Call BITMASK sub-routine, return in D6
+        AND     D2,D6                 * AND mask with op bits, get last 8 bits in D6
+        
+*        CMPI    #%00000000,D6         * all 0's == word offset
+*        BEQ     BCC_WORD_OFFSET
+        
+*        CMPI    #%11111111,D6         * all F's == long offset
+*        BEQ     BCC_LONG_OFFSET
+BCC_BYTE_OFFSET
+        CLR     (A4)
+        MOVE.L  D6,A4
+        LEA     (A4),A1
+        MOVE.B  #13,D0
         TRAP    #15
-
         BRA     BCC_END
-
+*BCC_WORD_OFFSET
+*        MOVEM.W (A2)+,A1
+*        MOVE.B  #13,D0
+*        TRAP    #15
+*        BRA     BCC_END
+*BCC_LONG_OFFSET
+*        MOVEM.L (A2)+,A1
+*        MOVE.B  #13,D0
+*        TRAP    #15
+*        BRA     BCC_END
 BCC_END * reload the memory, call RTS
-        MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
+        MOVEM   (A7)+,D0-D7/A0-A6 * Pop off the stack to return our registers
         RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -1325,9 +1289,184 @@ UNKNOWN1100
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1101
 
-    BSR     UNKNOWNOP
-    RTS
+        MOVEM.L A0-A6/D0-D7,-(A7)
+        MOVE.W  D2,D3 * make a copy to mutate
+		LSL.B   #7,D3 * isolate the 3 opmode bits
+        LSR.B   #8,D3 * by shifting out non-opmode bits
+        LSR.B   #5,D3
+		
+		CMPI.B	#0,D3
+		BEQ		BYTE_EA_DN
+		CMPI.B	#1,D3
+		BEQ		WORD_EA_DN
+		CMPI.B	#2,D3
+		BEQ		LONG_EA_DN
+		CMPI.B	#3,D3
+		BEQ		ADDA_WORD_OP
+		CMPI.B	#4,D3
+		BEQ		BYTE_DN_EA
+		CMPI.B	#5,D3
+		BEQ		WORD_DN_EA
+		CMPI.B	#6,D3
+		BEQ		LONG_DN_EA
+		CMPI.B	#7,D3
+		BEQ		ADDA_LONG_OP
+		BRA     ADD_ADDA_END
+		
+BYTE_EA_DN
+    	BSR		ADD_EA_DN_GENERIC       * print out 'ADD' base op name for ADDA too
 
+    	LEA		__B,A1                  * print out size
+    	MOVE.B	#14,D0
+    	TRAP	#15
+
+    	BSR     ADD_ADDA_SPACE          * print out space
+    *	MOVE.B  #1,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
+    *	BSR     ADD_ADDA_EA_REG         * break to print out reg's
+    	BRA     ADD_ADDA_PRINT
+
+WORD_EA_DN
+    	BSR		ADD_EA_DN_GENERIC
+
+    	LEA		__W,A1
+    	MOVE.B	#14,D0
+    	TRAP	#15
+    	
+        BSR     ADD_ADDA_SPACE
+ *   	MOVE.B  #1,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
+ *    	BSR     ADD_ADDA_EA_REG         * break to print out reg's
+        BRA     ADD_ADDA_PRINT
+    	
+LONG_EA_DN
+	    BSR		ADD_EA_DN_GENERIC
+
+    	LEA		__L,A1
+    	MOVE.B	#14,D0
+    	TRAP	#15
+
+    	BSR     ADD_ADDA_SPACE
+    * 	MOVE.B  #1,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
+    *	BSR     ADD_ADDA_EA_REG         * break to print out reg's
+        BRA     ADD_ADDA_PRINT
+    	
+ADDA_WORD_OP
+	    BSR		ADD_EA_DN_GENERIC
+
+    	LEA		ASCII_A,A1
+    	MOVE.B	#14,D0
+    	TRAP	#15
+
+    	LEA		__W,A1
+    	MOVE.B	#14,D0
+    	TRAP	#15
+    	
+        BSR     ADD_ADDA_SPACE
+ *    	MOVE.B  #1,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
+ *   	BSR     ADD_ADDA_EA_REG         * break to print out reg's
+        BRA     ADD_ADDA_PRINT
+    	
+BYTE_DN_EA
+	    BSR     ADD_EA_DN_GENERIC
+	    
+    	LEA		__B,A1
+    	MOVE.B	#14,D0
+    	TRAP	#15
+    	
+        BSR     ADD_ADDA_SPACE
+ *    	MOVE.B  #0,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
+ *   	BSR     ADD_ADDA_EA_REG         * break to print out reg's
+        BRA     ADD_ADDA_PRINT
+
+WORD_DN_EA
+    	BSR     ADD_EA_DN_GENERIC
+
+    	LEA		__W,A1
+    	MOVE.B	#14,D0
+    	TRAP	#15	
+
+    	BSR     ADD_ADDA_SPACE
+ *    	MOVE.B  #0,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
+ *    	BSR     ADD_ADDA_EA_REG         * break to print out reg's
+        BRA     ADD_ADDA_PRINT
+
+LONG_DN_EA
+    	BSR     ADD_EA_DN_GENERIC
+    	
+       	LEA		__L,A1
+    	MOVE.B	#14,D0
+    	TRAP	#15		
+    	
+        BSR     ADD_ADDA_SPACE
+ *    	MOVE.B  #0,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
+ *    	BSR     ADD_ADDA_EA_REG         * break to print out reg's
+    	BRA     ADD_ADDA_PRINT
+
+ADDA_LONG_OP
+    	BSR		ADD_EA_DN_GENERIC
+    	
+    	LEA		ASCII_A,A1
+    	MOVE.B	#14,D0
+    	TRAP	#15
+    	
+        LEA		__L,A1
+    	MOVE.B	#14,D0
+    	TRAP	#15
+    	
+        BSR     ADD_ADDA_SPACE
+ *   	MOVE.B  #1,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
+ *    	BSR     ADD_ADDA_EA_REG         * break to print out reg's
+        BRA     ADD_ADDA_PRINT
+
+ADD_EA_DN_GENERIC
+		LEA		OP_ADD_MSG,A1           * print out 'ADD'
+		MOVE.B	#14,D0
+		TRAP	#15
+		RTS
+		
+ADD_ADDA_SPACE
+        LEA		SPACE,A1
+    	MOVE.B	#14,D0
+    	TRAP	#15
+    	RTS
+    	
+ADD_ADDA_EA_REG
+        CLR     D4
+        MOVE.B  (A7)+,D4                * pop off from the stack, to tell what to do next
+        
+ *        CMPI.B  #1,D4
+ *       BEQ     EA_THEN_REG
+ *       CMPI.B  #0,D4
+ *       BEQ     REG_THEN_EA
+        
+ *       BRA     ADD_ADDA_END            * error if this gets hitup
+        
+* EA_THEN_REG                             * the upper reg comes after then ea in lower 6 bits
+* REG_THEN_EA                             * vice-versa for EA_THEN_REG
+ADD_ADDA_PRINT
+
+        BSR     EAHELPER05          * Print out data. TODO: DOESN'T WORK.
+
+        LEA     COMMA,A1            * formatting
+        MOVE.B  #14,D0              * Trap #14 prints out a comma
+        TRAP    #15                 * Perform Trap #14
+        
+        * bit manipulation is needed to make the outlier DIVS work
+        * with the generic EAHELPER611
+        BCLR    #6,D2
+        BCLR    #7,D2
+        BCLR    #8,D2
+        
+        * the above bits were cleared so that eahelper05 knows the destination
+        * is a data register.
+        
+        BSR     EAHELPER611 
+        
+ADD_ADDA_END
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        MOVEM.L (A7)+,A0-A6/D0-D7
+        RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -2770,6 +2909,7 @@ OP_BGE_MSG  DC.B    'BGE ',0
 OP_BLT_MSG  DC.B    'BLT ',0
 OP_BVC_MSG  DC.B    'BVC ',0
 OP_BRA_MSG  DC.B    'BRA ',0
+OP_ADD_MSG  DC.B    'ADD',0
 
 * ---> HEX CHARS
 ASCII_0     DC.B    '0',0
@@ -2872,6 +3012,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
