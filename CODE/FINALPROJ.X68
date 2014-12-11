@@ -96,8 +96,11 @@ START:  ORG    $1000            * first instruction of program
         BSR     BITMASK         * obtain a bitmask that goes from 12-15 (inclusive)
         * MOVE.W  D6,D2           * move the bitmask to D2
         
+        CLR     (__COUNTER)              * setup the counter
+        MOVE    #0,(__COUNTER)           
+        
+        BSR     CLEAR_SCREEN    * clear the prompt for start/end ADDR's
 LOOP    
-
         MOVE.L  A2,A6
         MOVE.L  #8,D3
         BSR     PRINT_ASCII_HEX_CHAR
@@ -199,16 +202,35 @@ LOOPUNKNOWNOP
         
 ITERATION
         MOVE    (A7)+,D6        * restore the bitmask to its previous state
+    
+        ADDI    #1,(__COUNTER)           * Track the lines on screen
+        CMPI    #30,(__COUNTER)
+        BNE     END_OF_LOOP     * Not at 30, go loop more
+        BSR     IDLE_STATE      * Break to idle, ask to clear screen
 
-        *MOVE.B  #14,D0          * Print a newline
-        *TRAP    #15             * Perform Trap #14
-
+END_OF_LOOP
         CMP     A2,D5           * Compare the starting address to ending address
         BEQ     END             * If they are equal, branch 
         BRA     LOOP            * Otherwise, branch back to LOOP
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
-
+IDLE_STATE
+    LEA     CONT_MSG,A1 * show msg to hit enter in order to continue
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    MOVE.B  #4,D0 * trap task 4 - input
+    TRAP    #15
+    CMPI    #$D,D1
+    
+    BSR     CLEAR_SCREEN * clear everything, so ready to output another 30
+    CLR.L   (__COUNTER)
+    RTS
+CLEAR_SCREEN
+    MOVE.B  #11,D0
+    MOVE.W  #$FF00,D1
+    TRAP    #15
+    RTS
 
 
 *-----------------------------------------------------------------------------
@@ -2984,6 +3006,7 @@ CR          EQU     $0D
 LF          EQU     $0A
 MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
 MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
+CONT_MSG    DC.B    'Hit the [ENTER] key to continue...',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
 
 * ---> OPS
@@ -3071,6 +3094,8 @@ __D5        DC.B   'D5',0
 __D6        DC.B   'D6',0
 __D7        DC.B   'D7',0
 
+__COUNTER   DS.B    1       * main loop counter
+
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -3097,20 +3122,32 @@ __D7        DC.B   'D7',0
     MULS.W  #3, D7
     MULS    D0, D7
     MULS    (A1)+, D2
+    NOP
     SUBQ    #8, D6
+    NOP
     SUBQ.L  #7, D1
+    NOP
     ORI     #4, D1
+    NOP
     LSL.L   #1,D1
+    NOP
     LSR.L   #2,D1
+    NOP
     ASL.L   #3,D1
+    NOP
     ASR.L   #4,D1
+    NOP
     ROL.L   #5,D1
+    NOP
     ROR.L   #8,D1
+    NOP
     BCLR    #2,D1
+    NOP
     ADDA.W  D1,A5
-    ADD.B   D3, D4
-    BGE     END
-    BRA     END
+    NOP
+    ADD.B   D3,D4
+    NOP
+    BRA     RLLYEND
 
 END
     RTS
@@ -3120,6 +3157,8 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
+
 
 
 
