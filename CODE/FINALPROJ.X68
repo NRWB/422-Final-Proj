@@ -365,9 +365,8 @@ OP0001
         
         MOVE.W  #12, D6              * Prep lower value for bitmask
         MOVE.W  #13, D7              * Prep upper value for bitmask
-        BSR     BITMASK             * Finalize bitmask setup
-        
-        AND     D2,D6
+        BSR     BITMASK              * Finalize bitmask setup
+        AND     D2,D6                * Apply bitmask
         
         LSR     #8,D6
         LSR     #4,D6
@@ -398,11 +397,9 @@ OP0001
         *TRAP    #15         * Perform Trap #14
         
 UNKNOWNOP0001
-
         BSR     UNKNOWNOP
         
 ENDOP0001
-
         MOVEM (A7)+,D0-D7/A0-A1
         RTS        
         
@@ -461,8 +458,6 @@ OP0011
     RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
-
-
 
 *-----------------------------------------------------------------------------
 *-----------------------------------------------------------------------------
@@ -1119,8 +1114,7 @@ OP0111
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1000
-        * Saving values to the stack
-        MOVEM   D0-D7/A0-A1,-(A7)
+        MOVEM   D0-D7/A0-A1,-(A7)   * Saving values to the stack
 
         * Check if the EA Mode is 001 since both DIVS and OR do not support it
         MOVE.W  #3, D6              * Prep lower value for bitmask
@@ -1152,7 +1146,7 @@ OP1000
         BSET    #0,D3               * in this case it is always word, so set the first bit of D3
                                     * to indicate a potential immediate of size word
         
-        BSR     EAHELPER05          * Print out data. TODO: DOESN'T WORK.
+        BSR     EAHELPER05          * Print out data
 
         LEA     COMMA,A1            * formatting
         MOVE.B  #14,D0              * Trap #14 prints out a comma
@@ -2470,14 +2464,11 @@ MOVEMHELPERPRE
 * REGISTERS:      a
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 UNKNOWNOP
-        MOVE.L  A2,D1   * prep the add to print
-        
-        SUB.L   #2,D1   * off by two error due to post increment correct
-        
-        MOVE.L  D2,D3   * save the opcode to print
+        MOVE.L  A2,D1   * Prep the add to print
+        SUB.L   #2,D1   * Off by two error due to post increment correct
+        MOVE.L  D2,D3   * Save the opcode to print
         
         MOVE.L  #16,D2  * set the base to 16
-        
         MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
         TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
         
@@ -2486,7 +2477,6 @@ UNKNOWNOP
         TRAP    #15
         
         MOVE.L  D3,D1   * move the opcode from D3 into D1 to print
-        
         MOVE.B  #15,D0   * Indicate we are using trap #15, 15 to in a certain #base
         TRAP    #15      * Perform Trap #3
 
@@ -2744,12 +2734,14 @@ BITMASKDONE
 *-----------------------------------------------------------------------------
 * SECTION: Constants/variables used throughout the program.
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
+
 * ---> GENERAL
 CR          EQU     $0D
 LF          EQU     $0A
 MSGSTART    DC.B    'ENTER START ADDRESS: ',CR,LF,0
 MSGEND      DC.B    'ENTER END ADDRESS: ',CR,LF,0
 NEWLINE     DC.B    CR,LF,0
+
 * ---> OPS
 DIVSOP      DC.B    'DIVS',0
 NOOPERATION DC.B    'NOP',0
@@ -2778,6 +2770,7 @@ OP_BGE_MSG  DC.B    'BGE ',0
 OP_BLT_MSG  DC.B    'BLT ',0
 OP_BVC_MSG  DC.B    'BVC ',0
 OP_BRA_MSG  DC.B    'BRA ',0
+
 * ---> HEX CHARS
 ASCII_0     DC.B    '0',0
 ASCII_1     DC.B    '1',0
@@ -2795,6 +2788,7 @@ ASCII_C     DC.B    'C',0
 ASCII_D     DC.B    'D',0
 ASCII_E     DC.B    'E',0
 ASCII_F     DC.B    'F',0
+
 * ---> SPECIAL CHARACTERS
 SPACE       DC.B    ' ',0
 DOLLAR      DC.B    '$',0
@@ -2806,10 +2800,12 @@ PLUS        DC.B    '+',0
 MINUS       DC.B    '-',0
 SLASH       DC.B    '/',0
 DASH        DC.B    '-',0
+
 * ---> B/W/L (BYTE, WORD, LONG, RESPECTIVELY)
 __B         DC.B    '.B ',0
 __W         DC.B    '.W ',0
 __L         DC.B    '.L ',0
+
 * ---> ADDRESS REGISTERS A0-A7
 __A0        DC.B   'A0',0
 __A1        DC.B   'A1',0    
@@ -2819,6 +2815,7 @@ __A4        DC.B   'A4',0
 __A5        DC.B   'A5',0
 __A6        DC.B   'A6',0
 __A7        DC.B   'A7',0
+
 * ---> DATA REGISTERS D0-D7
 __D0        DC.B   'D0',0
 __D1        DC.B   'D1',0
@@ -2828,6 +2825,7 @@ __D4        DC.B   'D4',0
 __D5        DC.B   'D5',0
 __D6        DC.B   'D6',0
 __D7        DC.B   'D7',0
+
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -2874,6 +2872,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
