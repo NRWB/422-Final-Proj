@@ -97,8 +97,21 @@ START:  ORG    $1000            * first instruction of program
         * MOVE.W  D6,D2           * move the bitmask to D2
         
 LOOP    
+
+        MOVE.L  A2,A6
+        MOVE.L  #8,D3
+        BSR     PRINT_ASCII_HEX_CHAR
+        
+        *MOVE.W  A2,D1           * print what address we are processing
+        *MOVE.B  #3,D0
+        *TRAP    #15
+        
+        LEA     SPACE,A1        * print a space to seperate the address from the data
+        MOVE.W  #14,D0
+        TRAP    #15
+
         MOVE    D6,-(A7)        * save the bitmask on the stack
-        MOVE.W  (A2)+,D2        * Read an operation into D1
+        MOVE.W  (A2)+,D2        * Read an operation into D2
         AND.W   D2,D6           * Apply this bitmask
         
         CMP     #OP_0000,D6     * Does the operation start with 0000?
@@ -2113,7 +2126,7 @@ UNKNOWNOP
 * PRE-CONDITION:  A6 contains the register of memory to print.
 *                 This parameter would be pre-loaded by, for example:
 *                 "LEA FOO_BAR_ADDR,A6" or "LEA $1234FEED,A6"
-*                 D6 contains the loops to do (number of bytes).
+*                 D3 contains the loops to do (number of bytes).
 * POST-CONDITION: 
 * REGISTERS:      
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
@@ -2122,7 +2135,7 @@ PRINT_ASCII_HEX_CHAR
     CLR.L       D5
     
     * fence post check (if-statement, check if 0 > chars)
-    CMPI.B      #0,D6
+    CMPI.B      #0,D3
     BEQ         INVALID_ASCII_INPUT * go to very last part if invalid
     
 *    MOVE.L      A6,D4
@@ -2229,12 +2242,13 @@ PRINT_ASCII_CHAR
     MOVE.B      #14,D0
     TRAP        #15
     
-    ADD.B       #1,D5 * loop until counter stops
-    CMP.B       D6,D5
-    BGE         PRINT_ASCII_FINISH
-    
+        
     CLR.L       D7
     MOVEM.L     (A7)+,D7 * copy back D7 from stack, to mutate its' bits
+    
+    ADD.B       #1,D5 * loop until counter stops
+    CMP.B       D3,D5
+    BGE         PRINT_ASCII_FINISH
     
     BRA         PRINT_ASCII_LOOP
 INVALID_ASCII_INPUT
@@ -2477,6 +2491,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
