@@ -1069,8 +1069,12 @@ BCC_BYTE_OFFSET
         CLR     (A4)
         MOVE.L  D6,A4
         LEA     (A4),A1
-        MOVE.B  #13,D0
+        MOVE.B  #14,D0
         TRAP    #15
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
         BRA     BCC_END
 *BCC_WORD_OFFSET
 *        MOVEM.W (A2)+,A1
@@ -1317,6 +1321,9 @@ UNKNOWN1100
 
 
 
+
+
+
 *-----------------------------------------------------------------------------
 *-----------------------------------------------------------------------------
 * NAME: OP_1101   (ADD, ADDA)
@@ -1328,29 +1335,38 @@ UNKNOWN1100
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1101
-
         MOVEM.L A0-A6/D0-D7,-(A7)
-        MOVE.W  D2,D3 * make a copy to mutate
-		LSL.B   #7,D3 * isolate the 3 opmode bits
-        LSR.B   #8,D3 * by shifting out non-opmode bits
-        LSR.B   #5,D3
 		
-		CMPI.B	#0,D3
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        LSR     #6,D6
+
+		CMPI.B	#%0000000000000000,D6
 		BEQ		BYTE_EA_DN
-		CMPI.B	#1,D3
+
+		CMPI.B	#%0000000000000001,D6
 		BEQ		WORD_EA_DN
-		CMPI.B	#2,D3
+
+		CMPI.B	#%0000000000000010,D6
 		BEQ		LONG_EA_DN
-		CMPI.B	#3,D3
+
+		CMPI.B	#%0000000000000011,D6
 		BEQ		ADDA_WORD_OP
-		CMPI.B	#4,D3
+
+		CMPI.B	#%0000000000000100,D6
 		BEQ		BYTE_DN_EA
-		CMPI.B	#5,D3
+
+		CMPI.B	#%0000000000000101,D6
 		BEQ		WORD_DN_EA
-		CMPI.B	#6,D3
+
+		CMPI.B	#%0000000000000110,D6
 		BEQ		LONG_DN_EA
-		CMPI.B	#7,D3
+
+		CMPI.B	#%0000000000000111,D6
 		BEQ		ADDA_LONG_OP
+
 		BRA     ADD_ADDA_END
 		
 BYTE_EA_DN
@@ -1361,8 +1377,6 @@ BYTE_EA_DN
     	TRAP	#15
 
     	BSR     ADD_ADDA_SPACE          * print out space
-    *	MOVE.B  #1,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
-    *	BSR     ADD_ADDA_EA_REG         * break to print out reg's
     	BRA     ADD_ADDA_PRINT
 
 WORD_EA_DN
@@ -1373,8 +1387,6 @@ WORD_EA_DN
     	TRAP	#15
     	
         BSR     ADD_ADDA_SPACE
- *   	MOVE.B  #1,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
- *    	BSR     ADD_ADDA_EA_REG         * break to print out reg's
         BRA     ADD_ADDA_PRINT
     	
 LONG_EA_DN
@@ -1385,8 +1397,6 @@ LONG_EA_DN
     	TRAP	#15
 
     	BSR     ADD_ADDA_SPACE
-    * 	MOVE.B  #1,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
-    *	BSR     ADD_ADDA_EA_REG         * break to print out reg's
         BRA     ADD_ADDA_PRINT
     	
 ADDA_WORD_OP
@@ -1400,10 +1410,7 @@ ADDA_WORD_OP
     	MOVE.B	#14,D0
     	TRAP	#15
     	
-        BSR     ADD_ADDA_SPACE
- *    	MOVE.B  #1,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
- *   	BSR     ADD_ADDA_EA_REG         * break to print out reg's
-        BRA     ADD_ADDA_PRINT
+        BRA     ADDA_PRT
     	
 BYTE_DN_EA
 	    BSR     ADD_EA_DN_GENERIC
@@ -1413,8 +1420,6 @@ BYTE_DN_EA
     	TRAP	#15
     	
         BSR     ADD_ADDA_SPACE
- *    	MOVE.B  #0,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
- *   	BSR     ADD_ADDA_EA_REG         * break to print out reg's
         BRA     ADD_ADDA_PRINT
 
 WORD_DN_EA
@@ -1425,8 +1430,6 @@ WORD_DN_EA
     	TRAP	#15	
 
     	BSR     ADD_ADDA_SPACE
- *    	MOVE.B  #0,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
- *    	BSR     ADD_ADDA_EA_REG         * break to print out reg's
         BRA     ADD_ADDA_PRINT
 
 LONG_DN_EA
@@ -1437,8 +1440,6 @@ LONG_DN_EA
     	TRAP	#15		
     	
         BSR     ADD_ADDA_SPACE
- *    	MOVE.B  #0,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
- *    	BSR     ADD_ADDA_EA_REG         * break to print out reg's
     	BRA     ADD_ADDA_PRINT
 
 ADDA_LONG_OP
@@ -1452,11 +1453,8 @@ ADDA_LONG_OP
     	MOVE.B	#14,D0
     	TRAP	#15
     	
-        BSR     ADD_ADDA_SPACE
- *   	MOVE.B  #1,-(A7)                * #1 means ea, then reg, versus #0 reg, then ea
- *    	BSR     ADD_ADDA_EA_REG         * break to print out reg's
-        BRA     ADD_ADDA_PRINT
-
+        BRA     ADDA_PRT
+        
 ADD_EA_DN_GENERIC
 		LEA		OP_ADD_MSG,A1           * print out 'ADD'
 		MOVE.B	#14,D0
@@ -1468,20 +1466,15 @@ ADD_ADDA_SPACE
     	MOVE.B	#14,D0
     	TRAP	#15
     	RTS
-    	
-ADD_ADDA_EA_REG
-        CLR     D4
-        MOVE.B  (A7)+,D4                * pop off from the stack, to tell what to do next
-        
- *        CMPI.B  #1,D4
- *       BEQ     EA_THEN_REG
- *       CMPI.B  #0,D4
- *       BEQ     REG_THEN_EA
-        
- *       BRA     ADD_ADDA_END            * error if this gets hitup
-        
-* EA_THEN_REG                             * the upper reg comes after then ea in lower 6 bits
-* REG_THEN_EA                             * vice-versa for EA_THEN_REG
+
+ADDA_PRT
+        BSR     MODE_DN
+        LEA     COMMA,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        BSR     MODE_AN
+        BRA     ADD_ADDA_END
+
 ADD_ADDA_PRINT
 
         BSR     EAHELPER05          * Print out data. TODO: DOESN'T WORK.
@@ -1490,21 +1483,14 @@ ADD_ADDA_PRINT
         MOVE.B  #14,D0              * Trap #14 prints out a comma
         TRAP    #15                 * Perform Trap #14
         
-        * bit manipulation is needed to make the outlier DIVS work
-        * with the generic EAHELPER611
-        BCLR    #6,D2
-        BCLR    #7,D2
-        BCLR    #8,D2
-        
-        * the above bits were cleared so that eahelper05 knows the destination
-        * is a data register.
-        
-        BSR     EAHELPER611 
+        BSR     EAHELPER611
+        BRA     ADD_ADDA_END
         
 ADD_ADDA_END
         LEA     NEWLINE,A1
         MOVE.B  #14,D0
         TRAP    #15
+        
         MOVEM.L (A7)+,A0-A6/D0-D7
         RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
@@ -3041,8 +3027,8 @@ __D7        DC.B   'D7',0
     ASR.L   #4,D1
     ROL.L   #5,D1
     ROR.L   #8,D1
+    ADDA.W  D1,A5
     BRA     END
-    BEQ     END
 
 END
     RTS
@@ -3052,6 +3038,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
