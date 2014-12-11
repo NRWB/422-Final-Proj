@@ -1,6 +1,6 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.15.02
-Created On: 12/10/2014 2:43:24 PM
+Created On: 12/10/2014 4:43:12 PM
 
 00000000                             1  *    666
 00000000                             2  *   66 66
@@ -2113,8 +2113,8 @@ Created On: 12/10/2014 2:43:24 PM
 00001D32                          2109  *-----------------------------------------------------------------------------
 00001D32                          2110  *-----------------------------------------------------------------------------
 00001D32                          2111  * NAME: Print ASCII hex char
-00001D32                          2112  * DESCRIPTION:    Prints and addres register to console in hex (ASCII chars)
-00001D32                          2113  * PRE-CONDITION:  A6 contains the register for memory to print.
+00001D32                          2112  * DESCRIPTION:    Prints and address register to console in hex (ASCII chars)
+00001D32                          2113  * PRE-CONDITION:  A6 contains the register of memory to print.
 00001D32                          2114  *                 This parameter would be pre-loaded by, for example:
 00001D32                          2115  *                 "LEA FOO_BAR_ADDR,A6" or "LEA $1234FEED,A6"
 00001D32                          2116  *                 D6 contains the loops to do (number of bytes).

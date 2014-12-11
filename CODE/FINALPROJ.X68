@@ -2109,8 +2109,8 @@ UNKNOWNOP
 *-----------------------------------------------------------------------------
 *-----------------------------------------------------------------------------
 * NAME: Print ASCII hex char
-* DESCRIPTION:    Prints and addres register to console in hex (ASCII chars)
-* PRE-CONDITION:  A6 contains the register for memory to print.
+* DESCRIPTION:    Prints and address register to console in hex (ASCII chars)
+* PRE-CONDITION:  A6 contains the register of memory to print.
 *                 This parameter would be pre-loaded by, for example:
 *                 "LEA FOO_BAR_ADDR,A6" or "LEA $1234FEED,A6"
 *                 D6 contains the loops to do (number of bytes).
@@ -2477,6 +2477,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
