@@ -2606,6 +2606,8 @@ DINVALID
         MOVE.B  #3,D0
         TRAP    #15
         
+        CLR.L   D7
+        
         BRA     DLOOPITER
         
 DLOOPITERCLR        
@@ -2708,6 +2710,8 @@ AINVALID
         
         MOVE.B  #3,D0
         TRAP    #15
+        
+        CLR.L   D7
         
         BRA     ALOOPITER
         
@@ -3241,6 +3245,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
