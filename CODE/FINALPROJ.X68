@@ -87,15 +87,15 @@ START:  ORG    $1000            * first instruction of program
         MOVE.W  #12,D6          * prep D6 for bitmask subroutine
         BSR     BITMASK         * obtain a bitmask that goes from 12-15 (inclusive)
         
-        CLR     (__COUNTER)     * setup for the counter
-        MOVE    #0,(__COUNTER)  * setup for the counter        
+        CLR     (__COUNTER)     * setup for the counter which controlls # of output
+        MOVE    #0,(__COUNTER)  * lines
         
         BSR     CLEAR_SCREEN    * clear the prompt for start/end ADDR's
 
 LOOP    
         MOVE.L  A2,A6           * Copy the starting address into A6   
         MOVE.L  #8,D3           * Move #8 into D3 to indicate the size
-        BSR     PRINT_ASCII_HEX_CHAR    * Subroutine to print out the char without Trap Task #15
+        BSR     PRINT_ASCII_HEX_CHAR    * Subroutine to print out hex without Trap Task #15
         
         LEA     SPACE,A1        * print a space to seperate the address from the data
         MOVE.W  #14,D0          * Trap #14 to display the SPACE
@@ -227,7 +227,7 @@ CLEAR_SCREEN
 *-----------------------------------------------------------------------------
 * NAME: OP_0000   (BCLR, ORI, CMPI)
 * DESCRIPTION:    Determines the instruction by using bit-level logic.
-* PRE-CONDITION:  
+* PRE-CONDITION:  D2 contains the OPcode to be processed
 * POST-CONDITION: All registers return to their previous state, and the output
 *                 goes to the output console for reading the raw data or the
 *                 actual instruction.
@@ -407,7 +407,7 @@ UNKNOWN0000
         BSR     UNKNOWNOP           * Unknown op
 
 END0000          
-        MOVEM   (A7)+,D0-D7/A0-A1   * Push values to the stack to save
+        MOVEM   (A7)+,D0-D7/A0-A1   * Pop values back of the stack, restore registers
         RTS
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
@@ -419,7 +419,7 @@ END0000
 *-----------------------------------------------------------------------------
 * NAME: OP_0001   (MOVE.B)
 * DESCRIPTION:    Determines the instruction by using bit-level logic.
-* PRE-CONDITION:  xyz
+* PRE-CONDITION:  D2 contains the opcode to be processed
 * POST-CONDITION: All registers return to their previous state, and the output
 *                 goes to the output console for reading the raw data or the
 *                 actual instruction.
@@ -433,16 +433,10 @@ OP0001
         BSR     BITMASK             * Finalize bitmask setup
         AND     D2,D6               * Apply bitmask
         
-        CMPI    #%0000000001000000,D6   * Is the move 001, an aspect of MOVEA?
+        CMPI    #%0000000001000000,D6   * Is it an unsupported mode?
         BNE     OP0001MOVE              * If not, branch to only print out MOVE
         
-        * Confirmed MOVEA at this point
-        LEA     MOVEAOP,A1      * Put 'MOVEA' into the window
-        MOVE.B  #14,D0          * Trap #14 to print out
-        TRAP    #15             * Perform Trap #14
-        
-        BRA     OP0001MOVEA     * Continue with printing out size, registers, etc.
-        
+        BRA     UNKNOWNOP0001 * it was an unpermitted mode, jump to unknownop
 OP0001MOVE
         LEA     MOVEOP,A1   * Put 'MOVE' into the window
         MOVE.B  #14,D0      * Trap #14 to print out
@@ -454,7 +448,7 @@ OP0001MOVEA
         MOVE.B  #14,D0      * Trap #14 to print out
         TRAP    #15         * Perform Trap #14
         
-        MOVE.L  #1,D3       * Move #1 into D3 as a size parameter for EAHELPER05
+        MOVE.L  #1,D3       * Move #1 into D3 as a size parameter
         BSR     EAHELPER05  * Perform EAHELPER05
         
         LEA     COMMA,A1    * Load ',' into the window
@@ -485,7 +479,7 @@ ENDOP0001
 *-----------------------------------------------------------------------------
 * NAME: OP_0010   (MOVE.L, MOVEA.L)
 * DESCRIPTION:    Determines the instruction by using bit-level logic.
-* PRE-CONDITION:  xyz
+* PRE-CONDITION:  D2 contains the opcode to be processed
 * POST-CONDITION: All registers return to their previous state, and the output
 *                 goes to the output console for reading the raw data or the
 *                 actual instruction.
@@ -517,31 +511,32 @@ OP0010MOVE
         
 OP0010MOVEA
 
-        LEA     __L,A1   * Put 'MOVE' into the window
+        LEA     __L,A1   * Put '.L ' into the window
+        MOVE.B  #14,D0   * Trap #14 to print out
+        TRAP    #15      * Perform Trap #14
+        
+        MOVE.L  #3,D3    * indicate the size of a potential
+                         * immediate is long
+        
+        BSR     EAHELPER05  * branch to ea helper to print the source
+        
+        LEA     COMMA,A1    * Put ',' into the window
         MOVE.B  #14,D0      * Trap #14 to print out
         TRAP    #15         * Perform Trap #14
         
-        MOVE.L  #3,D3
+        BSR     EAHELPER611 * branch to ea helper to print the destination
         
-        BSR     EAHELPER05
-        
-        LEA     COMMA,A1
-        MOVE.B  #14,D0
-        TRAP    #15
-        
-        BSR     EAHELPER611
-        
-        LEA     NEWLINE,A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     NEWLINE,A1  * Put a newline into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Peerform Trap task #14
         
         BRA     ENDOP0010
         
 UNKNOWNOP0010
-        BSR     UNKNOWNOP
+        BSR     UNKNOWNOP   * OP is not recognized by our compiler
         
 ENDOP0010
-        MOVEM (A7)+,D0-D7/A0-A1
+        MOVEM (A7)+,D0-D7/A0-A1 * restore registers we saved
         RTS        
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
@@ -553,7 +548,7 @@ ENDOP0010
 *-----------------------------------------------------------------------------
 * NAME: OP_0011   (MOVE.W, MOVEA.W)
 * DESCRIPTION:    Determines the instruction by using bit-level logic.
-* PRE-CONDITION:  xyz
+* PRE-CONDITION:  D2 contains the opcode to be processed
 * POST-CONDITION: All registers return to their previous state, and the output
 *                 goes to the output console for reading the raw data or the
 *                 actual instruction.
@@ -575,7 +570,7 @@ OP0011
         MOVE.B  #14,D0      * Trap #14 to print out
         TRAP    #15         * Perform Trap #14
         
-        BRA     OP0011MOVEA
+        BRA     OP0011MOVEA * Skip printing MOVE
         
 OP0011MOVE
 
@@ -586,30 +581,31 @@ OP0011MOVE
 OP0011MOVEA
 
         LEA     __W,A1   * Put 'MOVE' into the window
-        MOVE.B  #14,D0      * Trap #14 to print out
-        TRAP    #15         * Perform Trap #14
+        MOVE.B  #14,D0   * Trap #14 to print out
+        TRAP    #15      * Perform Trap #14
         
-        MOVE.L  #2,D3
+        MOVE.L  #2,D3   * indicate to eahlper that an
+                        * immediate could be
         
-        BSR     EAHELPER05
+        BSR     EAHELPER05 * used to print the source reg
         
-        LEA     COMMA,A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     COMMA,A1 * Put ',' into the window
+        MOVE.B  #14,D0   * Trap #14 to print out
+        TRAP    #15      * Perform Trap task #14
         
-        BSR     EAHELPER611
+        BSR     EAHELPER611 * used to print the destination reg
         
-        LEA     NEWLINE,A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     NEWLINE,A1 * Print a newline
+        MOVE.B  #14,D0     * Trap #14 to print out
+        TRAP    #15        * Perform Trap task #14
         
-        BRA     ENDOP0011
+        BRA     ENDOP0011 * we are done, head to end of subroutine
         
 UNKNOWNOP0011
-        BSR     UNKNOWNOP
+        BSR     UNKNOWNOP * print out an unrecognized OP
         
 ENDOP0011
-        MOVEM (A7)+,D0-D7/A0-A1
+        MOVEM (A7)+,D0-D7/A0-A1 * restore registers we saved
         RTS        
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
@@ -619,7 +615,7 @@ ENDOP0011
 *-----------------------------------------------------------------------------
 * NAME: OP_0100   (NOP, MOVEM, LEA, NEG, JSR, RTS)
 * DESCRIPTION:    Determines the instruction by using bit-level logic.
-* PRE-CONDITION:  xyz
+* PRE-CONDITION:  D2 contains the opcode to be processed
 * POST-CONDITION: All registers return to their previous state, and the output
 *                 goes to the output console for reading the raw data or the
 *                 actual instruction.
@@ -630,405 +626,392 @@ OP0100
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
         
         *NOP
-        CMPI    #%0100111001110001,D2
-        BNE     NOTNOP
+        CMPI    #%0100111001110001,D2   * Check the bits to see if we are NOP
+        BNE     NOTNOP                  * Not NOP, check the next possiblity
         
-        LEA     NOOPERATION,A1
-        MOVE.B  #13,D0          * Print a newline
-        TRAP    #15
+        LEA     NOOPERATION,A1  * Display 'NOP'
+        MOVE.B  #13,D0          * Load trap task #13
+        TRAP    #15             * Perform trap task #13
         
-        BRA     DONE0100 *we found it, move on to the next iteration
-NOTNOP *NEG
+        BRA     DONE0100 * OP identified, move out of the subroutine
+NOTNOP * This label processes NEG
         
         * prep values for BITMASK subroutine
-        MOVE.L  #8,D6
-        MOVE.L  #11,D7
+        MOVE.L  #8,D6   * Load 8 into D6, indicating the starting bit
+        MOVE.L  #11,D7  * Load 11 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Create the bitmask, stored in D6
         
-        AND     D2,D6                   * apply bitmask
+        AND     D2,D6                   * Apply bitmask to the OP
         
-        CMPI    #%0000010000000000,D6   * are we NEG?
-        BNE     NOTNEG                  * not neg
+        CMPI    #%0000010000000000,D6   * Is the OP NEG?
+        BNE     NOTNEG                  * The Op is not NEG, check next case
         
-        MOVE.L  #3,D6
-        MOVE.L  #5,D7
+        MOVE.L  #3,D6   * Load 3 into D6, indicating the starting bit
+        MOVE.L  #5,D7   * Load 11 into D7, indicating the ending bit
         
         BSR     BITMASK * generate a bitmask to be used to check mode
         
-        CMPI    #%0000000000001000,D6 * check to see if it is the unsupported mode
-        BEQ     UNKNOWN0100 * if it is, print print out as hex indicating bad op
+        CMPI    #%0000000000001000,D6 * check to see if it is unsupported mode
+        BEQ     UNKNOWN0100 * print print out as hex indicating bad op
         
-        CMPI    #%0000000000101000,D6 * check to see if it is the unsupported mode
-        BEQ     UNKNOWN0100 * if it is, print print out as hex indicating bad op
+        CMPI    #%0000000000101000,D6 * check to see if it is unsupported mode
+        BEQ     UNKNOWN0100 * print print out as hex indicating bad op
         
-        CMPI    #%0000000000110000,D6 * check to see if it is the unsupported mode
-        BEQ     UNKNOWN0100 * if it is, print print out as hex indicating bad op
+        CMPI    #%0000000000110000,D6 * check to see if it is unsupported mode
+        BEQ     UNKNOWN0100 * print print out as hex indicating bad op
       
         * it is NEG, print
-        LEA     NEGOP,A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     NEGOP,A1    * Display 'NEG'
+        MOVE.B  #14,D0      * Load trap task #14
+        TRAP    #15         * Perform trap task #14
         
-        BSR     SIZE67
+        BSR     SIZE67      * call size67 to print the size of the OP
         
-        BSR     EAHELPER05
+        BSR     EAHELPER05  * call eahelper05 to print the destination of op
         
-        LEA     NEWLINE,A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     NEWLINE,A1  * Display a newline
+        MOVE.B  #14,D0      * Load trap task #14
+        TRAP    #15         * Perform trap task #14
         
         BRA     DONE0100 * we found the op, move to next iteration
         
-NOTNEG *MOVEM
+NOTNEG * This label processes MOVEM
 
         * prep values for BITMASK subroutine
-        MOVE.L  #7,D6
-        MOVE.L  #9,D7
+        MOVE.L  #7,D6   * Load 7 into D6, indicating the starting bit
+        MOVE.L  #9,D7   * Load 9 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate the bitmask
         
         AND.L   D2,D6   * apply bitmask
         
         CMPI    #%0000000010000000,D6 * is it MOVEM?
         BNE     NOTMOVEM          * it is not MOVEM
         
-        MOVE.L  #10,D6
-        MOVE.L  #10,D7
+        MOVE.L  #10,D6  * Load 10 into D6, indicating the starting bit
+        MOVE.L  #10,D7  * Load 10 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate the bitmask
         
-        AND.L   D2,D6
+        AND.L   D2,D6   * Apply the bitmask to the OP
         
         CMPI    #%0000000000000000,D6 * is it register to memory?
-        BEQ     MOVEMTOMEM 
+        BEQ     MOVEMTOMEM * it is, branch to the label that processes it
         
-MOVEMTOREG *supported modes: 010 011
+MOVEMTOREG * This label processes MOVEM from memory to register
 
-        MOVE.L  #3,D6
-        MOVE.L  #5,D7
+        MOVE.L  #3,D6   * Load 3 into D6, indicating the starting bit
+        MOVE.L  #5,D7   * Load 5 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate the bitmask
         
-        AND.L   D2,D6
+        AND.L   D2,D6   * Apply the bitmask to the OP
         
         CMPI    #%0000000000000000,D6 * is it an unsupported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100           * yes, branch to unknown
         
         CMPI    #%0000000000001000,D6 * is it an unsupported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100           * yes, branch to unknown
         
         CMPI    #%0000000000100000,D6 * is it an unsupported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100           * yes, branch to unknown
         
         CMPI    #%0000000000101000,D6 * is it an unsupported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100           * yes, branch to unknown
         
         CMPI    #%0000000000110000,D6 * is it an unsupported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100           * yes, branch to unknown
         
         CMPI    #%0000000000111000,D6 * is it an unsupported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100           * yes, branch to unknown
         
-        LEA     MOVEMOP,A1
-        MOVE.B  #14,D0          * print MOVEM
-        TRAP    #15
+        LEA     MOVEMOP,A1  * Print MOVEM to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        MOVE.L  #6,D6
-        MOVE.L  #6,D7
+        MOVE.L  #6,D6   * Load 6 into D6, indicating the starting bit
+        MOVE.L  #6,D7   * Load 6 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate the bitmask
         
-        AND.L   D2,D6
+        AND.L   D2,D6   * Apply the bitmask to the OP
         
         CMPI    #%0000000001000000,D6 * is it a long op?
         BNE     NOTLONGMOVEM1       * no, it is a word
         
-        LEA     __L,A1
-        MOVE.B  #14,D0          * print .L 
-        TRAP    #15
+        LEA     __L,A1  * Load '.L ' to the window
+        MOVE.B  #14,D0  * Indicate task #14
+        TRAP    #15     * Perform trap task #14
         
-        BRA     SKIPNOTLONG1
+        BRA     SKIPNOTLONG1 * The OP was a long, skip the long portion
         
-NOTLONGMOVEM1
+NOTLONGMOVEM1 * this label prints out '.W ' for MOVEM
 
-        LEA     __W,A1
-        MOVE.B  #14,D0          * print .W 
-        TRAP    #15
+        LEA     __W,A1  * Load '.W ' to the window
+        MOVE.B  #14,D0  * Indicate we are using task #14
+        TRAP    #15     * Perform trap task #15
                 
-SKIPNOTLONG1
+SKIPNOTLONG1 * this label handles printing the source and dest regs of MOVEM
 
         BSR     EAHELPER05 * print out the register we are moving from
         
-        LEA     COMMA,A1
-        MOVE.B  #14,D0          * print , 
-        TRAP    #15
+        LEA     COMMA,A1    * Load ',' to the window
+        MOVE.B  #14,D0      * Indicate trap task #14
+        TRAP    #15         * Perform trap task #14
         
-        BSR     MOVEMHELPERPOST
+        BSR     MOVEMHELPERPOST * Call the helper function
         
-        MOVE.W  (A2)+,D2
+        MOVE.W  (A2)+,D2    * Read the next OP into D2
         
-        LEA     NEWLINE,A1
-        MOVE.B  #14,D0          * print a newline 
-        TRAP    #15
+        LEA     NEWLINE,A1  * Load newline to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
     
-        BRA     DONE0100          * we found and printed, move on to the next iteration
+        BRA     DONE0100 * Operation processed, move out of the subroutine
         
-MOVEMTOMEM * supported modes 010 100
+MOVEMTOMEM * this label handles MOVEM from register to memory
 
-        MOVE.L  #3,D6
-        MOVE.L  #5,D7
+        MOVE.L  #3,D6   * Load 3 into D6, indicating the starting bit
+        MOVE.L  #5,D7   * Load 5 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate the bitmask
         
-        AND.L   D2,D6
+        AND.L   D2,D6   * apply the bitmask to the OP
         
         CMPI    #%0000000000000000,D6 * is it an unsopported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100 * if yes, branch to print unknown
         
         CMPI    #%0000000000001000,D6 * is it an unsopported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100 * if yes, branch to print unknown
         
         CMPI    #%0000000000011000,D6 * is it an unsopported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100 * if yes, branch to print unknown
         
         CMPI    #%0000000000101000,D6 * is it an unsopported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100 * if yes, branch to print unknown
         
         CMPI    #%0000000000110000,D6 * is it an unsopported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100 * if yes, branch to print unknown
         
         CMPI    #%0000000001110000,D6 * is it an unsopported mode?
-        BEQ     UNKNOWN0100
+        BEQ     UNKNOWN0100 * if yes, branch to print unknown
         
-        LEA     MOVEMOP,A1
-        MOVE.B  #14,D0          * print MOVEM
-        TRAP    #15
+        LEA     MOVEMOP,A1  * Load 'MOVEM' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #15
         
-        MOVE.L  #6,D6
-        MOVE.L  #6,D7
+        MOVE.L  #6,D6   * Load 6 into D6, indicating the starting bit
+        MOVE.L  #6,D7   * Load 6 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate the bitmask
         
-        AND.L   D2,D6
+        AND.L   D2,D6   * Apply the bitmask to the OP
         
         CMPI    #%0000000001000000,D6 * is it a long op?
-        BNE     NOTLONGMOVEM2       * no, it is a word
+        BNE     NOTLONGMOVEM2  * no, it is a word
         
-        LEA     __L,A1
-        MOVE.B  #14,D0          * print .L 
-        TRAP    #15
+        LEA     __L,A1  * Load '.L ' to the window
+        MOVE.B  #14,D0  * Indicate task #14
+        TRAP    #15     * Perform trap task #14
         
-        BRA     SKIPNOTLONG2
+        BRA     SKIPNOTLONG2 * It was a long, so skip label for word
         
-NOTLONGMOVEM2
+NOTLONGMOVEM2 * This label handles printing .W for MOVEM
 
-        LEA     __W,A1
-        MOVE.B  #14,D0          * print .W 
-        TRAP    #15
+        LEA     __W,A1  * Load ',W ' to the window
+        MOVE.B  #14,D0  * Indicate task #14
+        TRAP    #15     * Perform trap task #14
                 
-SKIPNOTLONG2
+SKIPNOTLONG2 * This label handles printing the source and dest regs of MOVEM
 
-        BSR     MOVEMHELPERPRE
-
-        LEA     COMMA,A1
-        MOVE.B  #14,D0          * print , 
-        TRAP    #15
+        BSR     MOVEMHELPERPRE  * Branch to a helper function that prints
+                                * multiple source registers
+                                
+        LEA     COMMA,A1    * Load ',' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        BSR     EAHELPER05 * print out the register we are moving to
+        BSR     EAHELPER05 * Print out the register we are moving to
         
-        MOVE.W  (A2)+,D2
+        MOVE.W  (A2)+,D2    * Walk the pointer forward, move data into D2
         
-        LEA     NEWLINE,A1
-        MOVE.B  #14,D0          * print a newline 
-        TRAP    #15
+        LEA     NEWLINE,A1  * Load a newline to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
     
-        BRA     DONE0100          * we found and printed, move on to the next iteration
+        BRA     DONE0100    * Found and printed the OP, move on to the next iteration
 
-NOTMOVEM *JSR
+NOTMOVEM * This label processes JSR
+
         * prep values for BITMASK subroutine
-        MOVE.L  #6,D6
-        MOVE.L  #8,D7
+        MOVE.L  #6,D6   * Load 6 into D6, indicating the starting bit
+        MOVE.L  #8,D7   * Load 8 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate a bitmask
         
-        AND     D2,D6   * apply bitmask
+        AND     D2,D6   * Apply bitmask to OPcode
         
-        CMPI    #%0000000010000000,D6
-        BNE     NOTJSR          * it's not JSR
+        CMPI    #%0000000010000000,D6   * Check the masked bits to see if JSR
+        BNE     NOTJSR          * It's not JSR
         
-        LEA     JSROP,A1
-        MOVE.B  #14,D0          * Print JSR
-        TRAP    #15
+        LEA     JSROP,A1    * Load 'JSR' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        LEA     SPACE,A1
-        MOVE.B  #14,D0          * Print space
-        TRAP    #15
+        LEA     SPACE,A1    * Load ' ' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        LEA     DOLLAR,A1
-        MOVE.B  #14,D0          * Print $
-        TRAP    #15
+        LEA     DOLLAR,A1   * Load '$' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
         * print out where we are jumping to
         
         MOVE.L  (A2)+,D2 * read in the next word of the instruction
 
-        MOVE.L  D2,D7
+        MOVE.L  D2,D7   * Move the second word of the OP into D7
 
-        MOVE.L  D7,A6
+        MOVE.L  D7,A6   * Move the second word of the OP into A6
         
-        CLR.L   D3
+        CLR.L   D3      * Clear D3, it is to be used as a parameter
         
-        MOVE.B  #8,D3
+        MOVE.B  #8,D3   * Indicate the number of nibbles we wish to print
         
-        BSR     PRINT_ASCII_HEX_CHAR
+        BSR     PRINT_ASCII_HEX_CHAR * Call helper for printing hex
         
-        *MOVE.L  D2,D1   * save the opcode to print
+        LEA     NEWLINE,A1  * Load a newline to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        *MOVE.L  #16,D2  * set the base to 16
+        BRA     DONE0100 * found instruction, move out of subroutine
         
-        *MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
-        *TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
-        
-        *MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
-        
-        *MOVE.L  D2,D1   * save the opcode to print
-        
-        *MOVE.L  #16,D2  * set the base to 16
-        
-        *MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
-        *TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
-        
-        LEA     NEWLINE,A1
-        MOVE.B  #14,D0          * Print a newline
-        TRAP    #15
-        
-        BRA     DONE0100          * we already found instruction, next iteration
-NOTJSR *RTS
+NOTJSR * This label processes RTS
 
         * prep values for BITMASK subroutine
-        MOVE.L  #6,D6
-        MOVE.L  #8,D7
+        MOVE.L  #6,D6   * Load 6 into D6, indicating the starting bit
+        MOVE.L  #8,D7   * Load 8 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate a bitmask
         
-        AND     D2,D6   * apply bitmask
+        AND     D2,D6   * Apply the bitmask to the OPcode
         
-        CMPI    #%0000000001000000,D6
+        CMPI    #%0000000001000000,D6 * Check to see if it is RTS
         BNE     NOTRTS          * it's not RTS
         
-        LEA     RTSOP,A1
-        MOVE.B  #13,D0          * Print a newline and RTS
-        TRAP    #15
+        LEA     RTSOP,A1    * Load 'RTS' to the window
+        MOVE.B  #13,D0      * Indicate task #13
+        TRAP    #15         * Perform trap task #13
         
-        BRA     DONE0100          * we already found instruction, next iteration
-NOTRTS  *LEA
+        BRA     DONE0100 * found instruction, move out of subroutine
+        
+NOTRTS * This label processes LEA
        
         * prep values for BITMASK subroutine
-        MOVE.L  #6,D6
-        MOVE.L  #8,D7
+        MOVE.L  #6,D6   * Load 6 into D6, indicating the starting bit
+        MOVE.L  #8,D7   * Load 8 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate the bitmask
         
-        AND     D2,D6   * apply bitmask
+        AND     D2,D6   * Apply bitmask to the OPcode
         
-        CMPI    #%0000000111000000,D6
-        BNE     UNKNOWN0100          * it's not LEA, we dont know what it is
+        CMPI    #%0000000111000000,D6 * Is it LEA?
+        BNE     UNKNOWN0100          * It's not LEA, we dont know what it is
         
         * prep values for BITMASK subroutine
-        MOVE.L  #3,D6
-        MOVE.L  #5,D7
+        MOVE.L  #3,D6   * Load 3 into D6, indicating the starting bit
+        MOVE.L  #5,D7   * Load 5 into D7, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate bitmask
         
-        AND     D2,D6   * apply bitmask
+        AND     D2,D6   * Apply bitmask to the OPcode
         
-        CMPI    #%0000000000001000,D6
+        CMPI    #%0000000000001000,D6 * Check for invalid mode
         BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
         
-        CMPI    #%0000000000011000,D6
+        CMPI    #%0000000000011000,D6 * Check for invalid mode
         BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
         
-        CMPI    #%0000000000100000,D6
+        CMPI    #%0000000000100000,D6 * Check for invalid mode
         BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
         
-        CMPI    #%0000000000101000,D6
+        CMPI    #%0000000000101000,D6 * Check for invalid mode
         BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
         
-        CMPI    #%0000000000110000,D6
+        CMPI    #%0000000000110000,D6 * Check for invalid mode
         BEQ     UNKNOWN0100          * it's not LEA, we dont know what it is
         
-        CMPI    #%0000000000111000,D6
+        CMPI    #%0000000000111000,D6 * Check to see if two word LEA
         BEQ     TWOWORDLEA          * it's a two word LEA
         
-        LEA     LEAOP,A1
-        MOVE.B  #14,D0          * Print LEA
-        TRAP    #15
+        LEA     LEAOP,A1    * Load 'LEA' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        BCLR    #7,D2
-        BCLR    #8,D2 * needed so eahelper recognizes it as the correct mode
+        BCLR    #7,D2   * Clear this bit so that the EA helper knows the mode
+        BCLR    #8,D2   * Clear this bit so that the EA helper knows the mode
         
-        LEA     SPACE,A1
-        MOVE.B  #14,D0          * Print SPACE
-        TRAP    #15
+        LEA     SPACE,A1    * Load ' ' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        BSR     EAHELPER05
+        MOVE.L  #2,D3       * Indicate the size of a potential immediate
         
-        LEA     COMMA,A1
-        MOVE.B  #14,D0          * Print COMMA
-        TRAP    #15
+        BSR     EAHELPER05  * Call eahelper to print the source
         
-        BSR     EAHELPER611
+        LEA     COMMA,A1    * Load ',' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        LEA     NEWLINE,A1
-        MOVE.B  #14,D0          * Start a new line
-        TRAP    #15
+        BSR     EAHELPER611 * Call eahelper to print the destination
         
-        
-        * call EA helper
-        * MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+        LEA     NEWLINE,A1  * Load newline to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
                 
-        BRA     DONE0100          * we already found instruction, next iteration
+        BRA     DONE0100 * instruction identified, move on to next iteration
         
-TWOWORDLEA
+TWOWORDLEA * This label processes two word LEA
 
-        LEA     LEAOP,A1
-        MOVE.B  #14,D0   * Print LEA
-        TRAP    #15
+        LEA     LEAOP,A1    * Load ',' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        LEA     SPACE,A1
-        MOVE.B  #14,D0   * Print SPACE
-        TRAP    #15
+        LEA     SPACE,A1    * Load ',' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
 
-        MOVE.W  (A2)+,D1
+        MOVE.W  (A2)+,D1    * Move the next word of the instruction into D1
         
-        MOVE.L  #0,D6
-        MOVE.L  #15,D7
+        MOVE.L  #0,D6   * Load 0 into D6, indicating the starting bit
+        MOVE.L  #15,D7  * Load 15 into D6, indicating the ending bit
         
-        BSR     BITMASK
+        BSR     BITMASK * Generate bitmask
         
-        AND.L   D6,D1   * shave off bad info
+        AND.L   D6,D1   * Shave off any bad info
         
         MOVE.B  #3,D0   * Print the address which was the source
-        TRAP    #15
+        TRAP    #15     * Perform trap task #3
         
-        LEA     COMMA,A1
-        MOVE.B  #14,D0  * Print COMMA
-        TRAP    #15
+        LEA     COMMA,A1    * Load ',' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        BCLR    #7,D2
-        BCLR    #8,D2 * needed so eahelper recognizes it as the correct mode
+        BCLR    #7,D2   * Clear this bit so that the EA helper knows the mode
+        BCLR    #8,D2   * Clear this bit so that the EA helper knows the mode
         
-        BSR     EAHELPER611
+        BSR     EAHELPER611 * print out the destination
         
-        LEA     NEWLINE,A1
-        MOVE.B  #14,D0          * Start a new line
-        TRAP    #15
+        LEA     NEWLINE,A1  * Load ',' to the window
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        BRA     DONE0100
+        BRA     DONE0100    * We ID'd the OP, leave subroutine
         
-UNKNOWN0100 *dont know what it is
-        BSR     UNKNOWNOP
+UNKNOWN0100 * If we didn't identify the OP, branch here
+
+        BSR     UNKNOWNOP * prints out unknown operations
         
 DONE0100
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
@@ -1833,150 +1816,174 @@ OP1110
 
     MOVEM   D0-D7/A0-A1,-(A7)   * Caller saved
 
-    MOVE.L  #3,D6
-    MOVE.L  #4,D7
+    MOVE.L  #3,D6   * Load 3 into D6, indicating the starting bit for bitmask
+    MOVE.L  #4,D7   * Load 4 into D7, indicating the ending bit for bitmask
     
-    BSR     BITMASK * generate a bitmask for the 3 and 4 bits
+    BSR     BITMASK * Generate a bitmask for the 3 and 4 bits
     
-    AND.L   D2,D6
+    AND.L   D2,D6   * Apply the bitmask to the OPcode
     
-    CMPI    #%0000000000001000,D6 *is it a logical shift
+    CMPI    #%0000000000001000,D6 * Is it a logical shift?
     BEQ     LS
     
-    CMPI    #%0000000000000000,D6 *is it an arithmatic shift
+    CMPI    #%0000000000000000,D6 * Is it an arithmatic shift?
     BEQ     AS
     
-    CMPI    #%0000000000011000,D6 *is it a rorate?
+    CMPI    #%0000000000011000,D6 * Is it a rotate?
     BEQ     RO
 
-    BSR     UNKNOWNOP *if nothing above, we don't know what it is
-    BRA     ENDOP1110
+    BSR     UNKNOWNOP * If none of the above, it's not an OP we identify
     
-LS
-    MOVE.L  #8,D6
-    MOVE.L  #8,D7
+    BRA     ENDOP1110 * Branch to the unknownop part of the subroutine
     
-    BSR     BITMASK
+LS * This label handles LS
+
+    MOVE.L  #8,D6   * Load 8 into D6, indicating the starting bit for bitmask
+    MOVE.L  #8,D7   * Load 8 into D7, indicating the ending bit for bitmask
     
-    AND.L   D2,D6
+    BSR     BITMASK * Generate bitmask
     
-    CMPI    #0,D6 * is it a left shift?
+    AND.L   D2,D6 * Apply the bitmask
+    
+    CMPI    #0,D6 * Is it a left shift?
     BEQ     LSR
     
-    BRA     LSL * if not a left shift, must be right
+    BRA     LSL * If not a left shift, must be right
 
-LSL
+LSL * This label handles LSL
 
-    LEA     LSLOP,A1            * formatting
+    LEA     LSLOP,A1            * Load 'LSL' to the window
     MOVE.B  #14,D0              * Trap #14 prints out LSL
     TRAP    #15                 * Perform Trap #14
     
     BRA     OP1110GENERIC       * a generic part of OP1110 that
-                                * prints the registers and imm data
-LSR
+                                * prints registers and imm data
+LSR * This label handles LSR
 
-    LEA     LSROP,A1            * formatting
+    LEA     LSROP,A1            * Load 'LSR' to the window
     MOVE.B  #14,D0              * Trap #14 prints out LSR
     TRAP    #15                 * Perform Trap #14
     
     BRA     OP1110GENERIC       * a generic part of OP1110 that
                                 * prints the registers and imm data
 
-AS
-    MOVE.L  #8,D6
-    MOVE.L  #8,D7
+AS * This label handles AS
+
+    MOVE.L  #8,D6   * Load 8 into D6, indicating the starting bit for bitmask
+    MOVE.L  #8,D7   * Load 8 into D7, indicating the ending bit for bitmask
     
-    BSR     BITMASK
+    BSR     BITMASK * Generate bitmask
     
-    AND.L   D2,D6
+    AND.L   D2,D6   * Apply bitmask to OPcode
     
-    CMPI    #0,D6 * is it a left shift?
+    CMPI    #0,D6 * Is it a left shift?
     BEQ     ASR
     
-    BRA     ASL * if not a left shift, must be right
+    BRA     ASL * If not a left shift, must be right
     
-ASL
+ASL * This label handles ASL
 
-    LEA     ASLOP,A1            * formatting
+    LEA     ASLOP,A1            * Load 'ASL' to the window
     MOVE.B  #14,D0              * Trap #14 prints out ASL
     TRAP    #15                 * Perform Trap #14
     
     BRA     OP1110GENERIC       * a generic part of OP1110 that
                                 * prints the registers and imm data
-ASR
+ASR * This label handles ASR
 
-    LEA     ASROP,A1            * formatting
+    LEA     ASROP,A1            * Load 'ASR' to the window
     MOVE.B  #14,D0              * Trap #14 prints out ASR
     TRAP    #15                 * Perform Trap #14
     
     BRA     OP1110GENERIC       * a generic part of OP1110 that
                                 * prints the registers and imm data
-RO
-    MOVE.L  #8,D6
-    MOVE.L  #8,D7
+RO * This label handles RO
+
+    MOVE.L  #8,D6   * Load 8 into D6, indicating the starting bit for bitmask
+    MOVE.L  #8,D7   * Load 8 into D7, indicating the ending bit for bitmask
     
-    BSR     BITMASK
+    BSR     BITMASK * Generate bitmask
     
-    AND.L   D2,D6
+    AND.L   D2,D6   Apply bitmask to OPcode
     
-    CMPI    #0,D6 * is it a left shift?
+    CMPI    #0,D6 * Is it a left shift?
     BEQ     ROR
     
-    BRA     ROL * if not a left shift, must be right
+    BRA     ROL * If not a left shift, must be right
 
-ROL
+ROL * This label handles ROL
 
-    LEA     ROLOP,A1            * formatting
+    LEA     ROLOP,A1            * Load 'ROL' to the window
     MOVE.B  #14,D0              * Trap #14 prints out ROL
     TRAP    #15                 * Perform Trap #14
     
     BRA     OP1110GENERIC       * a generic part of OP1110 that
                                 * prints the registers and imm data
-ROR
+ROR * This label handles ROR
 
-    LEA     ROROP,A1            * formatting
+    LEA     ROROP,A1            * Load 'ROR' to the window
     MOVE.B  #14,D0              * Trap #14 prints out ROR
     TRAP    #15                 * Perform Trap #14
     
     BRA     OP1110GENERIC       * a generic part of OP1110 that
                                 * prints the registers and imm data
 
-OP1110GENERIC
+OP1110GENERIC * This label handles the parts of OP1110 that are common
 
-    BSR     SIZE67
+    BSR     SIZE67  * Print the size of the operation
     
-    MOVE.L  #5,D6
-    MOVE.L  #5,D7
+    MOVE.L  #5,D6   * Load 5 into D6, indicating the starting bit for bitmask
+    MOVE.L  #5,D7   * Load 5 into D7, indicating the ending bit for bitmask
     
-    BSR     BITMASK
+    BSR     BITMASK * Genereate bitmask
     
-    AND.L   D2,D6
+    AND.L   D2,D6   * Apply bitmask
     
-    CMPI    #%0000000000100000,D6   *is it a data reg?
+    CMPI    #%0000000000100000,D6   * Is it a data reg?
     BEQ     OP1110DATAREG
     
-    LEA     IMD,A1              * formatting
-    MOVE.B  #14,D0              * Trap #14 prints out pound #
-    TRAP    #15                 * Perform Trap #14
+    LEA     IMD,A1  * Load '#' to the window
+    MOVE.B  #14,D0  * Trap #14 prints out pound #
+    TRAP    #15     * Perform Trap #14
     
-    MOVE.L  #9,D6
-    MOVE.L  #11,D7
+    MOVE.L  #9,D6   * Load 9 into D6, indicating the starting bit for bitmask
+    MOVE.L  #11,D7  * Load 11 into D7, indicating the ending bit for bitmask
     
-    BSR     BITMASK
+    BSR     BITMASK * Generate bitmask
     
-    AND.L   D2,D6
+    AND.L   D2,D6   * Apply bitmask to the OPcode
     
     CMPI    #0,D6 * special case, if zero print #8 not #0
     BEQ     OP1110IMMEIGHT
     
-    LSR.L   #8,D6
-    LSR.L   #1,D6
+    LSR.L   #8,D6   * Shift the size over for easy printing
+    LSR.L   #1,D6   * Shift the size over for easy printing
     
-    MOVE.L  D6,D1              * formatting
-    MOVE.B  #3,D0              * Trap #14 prints out the number in D1
+    MOVE.L  D6,D1   * Load the size of the immediate into D1
+    MOVE.B  #3,D0   * Trap #14 prints out the number in D1
+    TRAP    #15     * Perform Trap #14
+    
+    LEA     COMMA,A1    * Load ',' to the window
+    MOVE.B  #14,D0      * Trap #14 prints out comma
+    TRAP    #15         * Perform Trap #1
+    
+    * in order to use the eahlpers, we need to do some bit manipulation
+    * clearing the bits below lets our helper know that the mode is Dn
+    BCLR    #3,D2
+    BCLR    #4,D2
+    BCLR    #5,D2
+    
+    BSR     EAHELPER05 * Print out the destination REG
+    
+    BRA     ENDOP1110 * We have identified and printed the OP, leave subroutine
+    
+OP1110IMMEIGHT * This label processes the special case where immediate == 0
+
+    MOVE.L  #8,D1              * Load 8 into D1 to be printed
+    MOVE.B  #3,D0              * Trap #3 prints out the number in D1
     TRAP    #15                * Perform Trap #14
     
-    LEA     COMMA,A1            * formatting
+    LEA     COMMA,A1            * Load ',' to the window
     MOVE.B  #14,D0              * Trap #14 prints out comma
     TRAP    #15                 * Perform Trap #1
     
@@ -1986,31 +1993,11 @@ OP1110GENERIC
     BCLR    #4,D2
     BCLR    #5,D2
     
-    BSR     EAHELPER05
+    BSR     EAHELPER05 * Print out the destination reg
     
-    BRA     ENDOP1110
-    
-OP1110IMMEIGHT
+    BRA     ENDOP1110 * Op is ID'ed and printed, move out of subroutine
 
-    MOVE.L  #8,D1              * formatting
-    MOVE.B  #3,D0              * Trap #14 prints out the number in D1
-    TRAP    #15                * Perform Trap #14
-    
-    LEA     COMMA,A1            * formatting
-    MOVE.B  #14,D0              * Trap #14 prints out comma
-    TRAP    #15                 * Perform Trap #1
-    
-    * in order to use the eahlpers, we need to do some bit manipulation
-    * clearing the bits below lets our helper know that the mode is Dn
-    BCLR    #3,D2
-    BCLR    #4,D2
-    BCLR    #5,D2
-    
-    BSR     EAHELPER05
-    
-    BRA     ENDOP1110
-
-OP1110DATAREG
+OP1110DATAREG * This label handles printing REG to REG operations
 
     * in order to use the eahlpers, we need to do some bit manipulation
     * clearing the bits below lets our helper know that the mode is Dn
@@ -2021,17 +2008,17 @@ OP1110DATAREG
     BCLR    #7,D2
     BCLR    #8,D2
     
-    BSR     EAHELPER611
+    BSR     EAHELPER611 * Print out the source register
     
-    LEA     COMMA,A1            * formatting
+    LEA     COMMA,A1            * Load ',' to the window
     MOVE.B  #14,D0              * Trap #14 prints out comma
     TRAP    #15                 * Perform Trap #14
     
-    BSR     EAHELPER05
+    BSR     EAHELPER05  * Op is ID'ed and printed, move out of subroutine
 
-ENDOP1110
+ENDOP1110 * This label is jumped to after the Opcode has been processed
 
-    LEA     NEWLINE,A1          * formatting
+    LEA     NEWLINE,A1          * Load a newline to the window
     MOVE.B  #14,D0              * Trap #14 prints out a new line
     TRAP    #15                 * Perform Trap #14
     
@@ -2076,7 +2063,9 @@ EAHELPER611
     
     MOVE.W  #6, D6              * Prep lower value for bitmask
     MOVE.W  #8, D7              * Prep upper value for bitmask
+    
     BSR     BITMASK             * Finalize bitmask setup
+    
     AND     D2,D6               * Apply bitmask
     
     * to move the mode where EAHELPER50 can process it
@@ -2104,11 +2093,11 @@ EAHELPER611
     OR.L    D4,D3   * combind the register and mode
     MOVE.L  D3,D2   * put the result in D2 so EAHELPER05 can process it
     
-    BSR     EAHELPER05
-    
+    BSR     EAHELPER05 * the bits have been shifted to where EAHELPER05
+                       * can interperate them
 ENDEAHELPER611
     
-    MOVEM  (A7)+,D0-D7/A0-A1    * Revert back
+    MOVEM  (A7)+,D0-D7/A0-A1    * Restore registers
     RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -2128,12 +2117,11 @@ ENDEAHELPER611
 * REGISTERS:      a
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 EAHELPER05
-    * todo: add code for printing immediate values
     
     MOVEM   D0-D7/A0-A1,-(A7) * save stuff
     
-    MOVE.L  #3,D6
-    MOVE.L  #5,D7
+    MOVE.L  #3,D6   * Load 3 into D6 indicating the starting bit of the bitmask
+    MOVE.L  #5,D7   * Load 5 into D7 indicating the ending bit of the bitmask
     
     BSR     BITMASK * generate a bitmask to identify the mode
     
@@ -2144,20 +2132,20 @@ EAHELPER05
     CMPI    #%0000000000000000,D6 * is it data register direct?
     BNE     NOTDATAREG
     
-    BSR     MODE_DN
+    BSR     MODE_DN * It is data register direct, BSR to print data regs
      
-    BRA     ENDEAHELPER05
+    BRA     ENDEAHELPER05 * Sucessfully printed, move out of subroutine
     
-NOTDATAREG * address register direct
+NOTDATAREG * This label handles address register direct
     
     CMPI    #%0000000000001000,D6 * is it address register direct?
     BNE     NOTADRDIRECT
     
     BSR     MODE_AN * simply prints out the address register
      
-    BRA     ENDEAHELPER05
+    BRA     ENDEAHELPER05   * Sucessfully printed, move out of subroutine
     
-NOTADRDIRECT * address register indirect
+NOTADRDIRECT * This label handles address register indirect
         
     CMPI    #%0000000000010000,D6 * is it address register indirect?
     BNE     NOTADRINDIRECT
@@ -2173,11 +2161,11 @@ NOTADRDIRECT * address register indirect
     MOVE.W  #14,D0          * Trap #14 to display message
     TRAP    #15             * Perform #14
      
-    BRA     ENDEAHELPER05
+    BRA     ENDEAHELPER05   * Sucessfully printed, move out of subroutine
     
-NOTADRINDIRECT * address register indirect, post increment
+NOTADRINDIRECT * This label handles address register indirect, post increment
     
-    CMPI    #%0000000000011000,D6 * is it address register indirect post increment?
+    CMPI    #%0000000000011000,D6 * is it address register indirect post inc?
     BNE     NOTADRINDIRECTPOST
     
     LEA     OBRACK,A1       * Load '('
@@ -2185,107 +2173,109 @@ NOTADRINDIRECT * address register indirect, post increment
     TRAP    #15             * Perform #14
         
 
-    BSR     MODE_AN * print out an address register
+    BSR     MODE_AN * Print out an address register
     
     LEA     CBRACK,A1       * Load ')'
     MOVE.W  #14,D0          * Trap #14 to display message
     TRAP    #15             * Perform #14
     
     LEA     PLUS,A1       * Load '+'
-    MOVE.W  #14,D0          * Trap #14 to display message
-    TRAP    #15             * Perform #14
+    MOVE.W  #14,D0        * Trap #14 to display message
+    TRAP    #15           * Perform #14
      
-    BRA     ENDEAHELPER05
+    BRA     ENDEAHELPER05   * Sucessfully printed, move out of subroutine
     
-NOTADRINDIRECTPOST * address register indirect, pre decrement
+NOTADRINDIRECTPOST * This label handles address register indirect, pre decrement
     
-    CMPI    #%0000000000100000,D6 * is it address register indirect pre decrement?
+    CMPI    #%0000000000100000,D6 * is it address register indirect pre dec?
     BNE     NOTADRINDIRECTPRE
     
     LEA     MINUS,A1       * Load '-'
-    MOVE.W  #14,D0          * Trap #14 to display message
-    TRAP    #15             * Perform #14
+    MOVE.W  #14,D0         * Trap #14 to display message
+    TRAP    #15            * Perform #14
     
     LEA     OBRACK,A1       * Load '('
     MOVE.W  #14,D0          * Trap #14 to display message
     TRAP    #15             * Perform #14
         
 
-    BSR     MODE_AN * print out an address register
+    BSR     MODE_AN * Print out an address register
     
     LEA     CBRACK,A1       * Load ')'
     MOVE.W  #14,D0          * Trap #14 to display message
     TRAP    #15             * Perform #14
      
-    BRA     ENDEAHELPER05
+    BRA     ENDEAHELPER05   * Sucessfully printed, move out of subroutine
 
-NOTADRINDIRECTPRE
+NOTADRINDIRECTPRE * This label handles immediate mode
 
-    CMPI    #%0000000000111000,D6 * is it immediate?
+    CMPI    #%0000000000111000,D6 * Is it immediate?
     BNE     NOTIMMEDIATE
 
-    CMPI    #1,D3 * is it a byte?
+    CMPI    #1,D3 * Is it a byte?
     BNE     NOTIMMBYTE
     
-    LEA     IMD,A1 *print out the '#' indicating an immediate value
-    MOVE.B  #14,D0
-    TRAP    #15
+    LEA     IMD,A1  * Load '#'
+    MOVE.B  #14,D0  * Trap #14 to display message
+    TRAP    #15     * Perform #14
     
-    MOVE.L  #0, D6              * Prep lower value for bitmask
-    MOVE.L  #7, D7              * Prep upper value for bitmask
-    BSR     BITMASK             * Finalize bitmask setup
+    MOVE.L  #0, D6  * Prep lower value for bitmask
+    MOVE.L  #7, D7  * Prep upper value for bitmask
+    
+    BSR     BITMASK * Generate bitmask
         
-    MOVE.W  (A2)+,D1
+    MOVE.W  (A2)+,D1 * Read next word of instruction into D1
     
-    AND.L     D6,D1
+    AND.L   D6,D1   * Apply bitmask to newly read word
         
-    MOVE.B  #3,D0   
-    TRAP    #15      * Perform Trap #3
+    MOVE.B  #3,D0   * Indicate trap #3
+    TRAP    #15     * Perform Trap #3
     
-    BRA     ENDEAHELPER05
+    BRA     ENDEAHELPER05   * Sucessfully printed, move out of subroutine
 
 NOTIMMBYTE
     
     CMPI    #2,D3 * is it a word?
     BNE     NOTIMMWORD
     
-    LEA     IMD,A1 *print out the '#' indicating an immediate value
-    MOVE.B  #14,D0
-    TRAP    #15
+    LEA     IMD,A1  * Load '#'    
+    MOVE.B  #14,D0  * Trap #14 to display message
+    TRAP    #15     * Perform #14
     
-    MOVE.L  #0, D6              * Prep lower value for bitmask
-    MOVE.L  #15, D7             * Prep upper value for bitmask
-    BSR     BITMASK             * Finalize bitmask setup
+    MOVE.L  #0, D6  * Prep lower value for bitmask
+    MOVE.L  #15, D7 * Prep upper value for bitmask
+    
+    BSR     BITMASK * Generate bitmask
         
-    MOVE.W  (A2)+,D1
+    MOVE.W  (A2)+,D1 * Read next word of operation
     
-    AND.L    D6,D1               * Apply bitmask
+    AND.L    D6,D1  * Apply bitmask
         
-    MOVE.B  #3,D0   
-    TRAP    #15      * Perform Trap #3
+    MOVE.B  #3,D0   * Indicate trap #3 
+    TRAP    #15     * Perform Trap #3
     
-    BRA     ENDEAHELPER05
+    BRA     ENDEAHELPER05   * Sucessfully printed, move out of subroutine
     
 NOTIMMWORD
     CMPI    #3,D3 * is it a long?
     BNE     NOTIMMEDIATE
     
-    LEA     IMD,A1 *print out the '#' indicating an immediate value
-    MOVE.B  #14,D0
-    TRAP    #15
+    LEA     IMD,A1  * Load '#'
+    MOVE.B  #14,D0  * Trap #14 to display message
+    TRAP    #15     * Perform #14
         
-    MOVE.L  (A2)+,D1
+    MOVE.L  (A2)+,D1 * Read the next word of the operation into D1
         
-    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
-    TRAP    #15      * Perform Trap #3
+    MOVE.B  #3,D0   * Indicate trap #3
+    TRAP    #15     * Perform Trap #3
     
-    BRA     ENDEAHELPER05
+    BRA     ENDEAHELPER05   * Sucessfully printed, move out of subroutine
 
 NOTIMMEDIATE
-    BSR     UNKNOWNOP
+    BSR     UNKNOWNOP * Could not identify mode, BSR UNKNOWNOP
     
 ENDEAHELPER05
-    MOVEM   (A7)+,D0-D7/A0-A1 * restore stuff
+    MOVEM   (A7)+,D0-D7/A0-A1 * Restore Registers
     RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -2304,12 +2294,14 @@ ENDEAHELPER05
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 * ---> Dn
 MODE_DN
-        MOVEM   D0-D7/A0-A1,-(A7) * save stuff
+        MOVEM   D0-D7/A0-A1,-(A7) * Save Registers
 
-        MOVE.W  #0, D6              * Prep lower value for bitmask
-        MOVE.W  #2, D7              * Prep upper value for bitmask
-        BSR     BITMASK             * Finalize bitmask setup
-        AND     D2,D6               * Apply bitmask
+        MOVE.W  #0, D6  * Prep lower value for bitmask
+        MOVE.W  #2, D7  * Prep upper value for bitmask
+        
+        BSR     BITMASK * Generate bitmask
+        
+        AND     D2,D6   * Apply bitmask
         
         CMPI    #%000000000000000, D6   * Data Register D0?
         BNE     NOTD0
@@ -2357,7 +2349,7 @@ NOTD6
         BRA     ENDMODE_DN
         
 ENDMODE_DN
-        MOVEM   (A7)+,D0-D7/A0-A1 * restore stuff
+        MOVEM   (A7)+,D0-D7/A0-A1 * Restore registers
         RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -2724,99 +2716,98 @@ MOVEMHELPERPOST
         CLR.L   D7  * == counts the number of registers in a range
         MOVE.B  #1,D6 * to fix fencepost issue
         CLR.L   D2
-        MOVE.W  (A2),D2
+        MOVE.W  (A2),D2 * move the next word of the OP into D2
         
-DLOOP * loop to print out the data register portion of the addresses being saved
+DLOOP * Loop to print out the data register portion of the addresses being saved
 
-        ROR     #1,D2
-        BCS     DVALID
+        ROR     #1,D2 * Rotate one bit out of D2
+        BCS     DVALID  * Was the bit set?
         
-        BRA     DINVALID
+        BRA     DINVALID * No it was not
         
-DVALID
-        CMPI    #0,D3
-        BEQ     DFORWARDVALID * we are not in a range
+DVALID * This lable handles cases where the bit rotated out was true
+
+        CMPI    #0,D3   * Check to see if in a range
+        BEQ     DFORWARDVALID * Not in a range
         
-        ADDI    #1,D7 *increment number of regs in range
+        ADDI    #1,D7 * Increment number of regs in range
         
-        CMPI    #1,D6   *have we already printed a symbol?
-        BEQ     DLOOPITER
+        CMPI    #1,D6   * Check to see if a symbol has been printed
+        BEQ     DLOOPITER * If one has, move on to the next iteration
         
-        LEA     DASH,A1    *print a dash
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     DASH,A1 * Load '-'
+        MOVE.B  #14,D0  * Indicate task #14
+        TRAP    #15     * Perform trap task #14
         
-        MOVE.B  #1,D6 * indicates a symbol has been printed
+        MOVE.B  #1,D6 * Indicate a symbol has been printed
         
-        BRA     DLOOPITER
+        BRA     DLOOPITER * Move to next iteration
         
-DFORWARDVALID
-        * not in a range yet, print
+DFORWARDVALID * This label handles the case where the bit rotated out was true
         
-        CMPI    #0,D4
-        BEQ     DNOSLASH
+        CMPI    #0,D4 * Check to see if a slash should be printed
+        BEQ     DNOSLASH * It does not, move to label that doesn't print slash
                 
-        LEA     SLASH,A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     SLASH,A1 * Load '/'
+        MOVE.B  #14,D0   * Indicate task #14
+        TRAP    #15      * Perform trap task #14
         
-DNOSLASH
+DNOSLASH * This label handles the true case without printing a slash
 
-        MOVE.B  #1,D4 * we have printed something, now slashes are fair game
+        MOVE.B  #1,D4 * We have printed something, now slashes are fair game
         
-        MOVE.B  #1,D6   * we have printed a symbol
+        MOVE.B  #1,D6 * Indicate a symbol has been printed
         
-        LEA     ASCII_D,A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     ASCII_D,A1  * Load 'D'
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        MOVE.L  D5,D1
-        MOVE.B  #3,D0
-        TRAP    #15
+        MOVE.L  D5,D1   * Load the number of the data register
+        MOVE.B  #3,D0   * Indicate task #14
+        TRAP    #15     * Perform trap task #14
 
-        MOVE.B  #1,D3   * set to 1 to indicate we are in a range
-        MOVE.B  #0,D6   * set to 0 to indicate we have not printed a symbol
+        MOVE.B  #1,D3   * Set to 1 to indicate we are in a range
+        MOVE.B  #0,D6   * Set to 0 to indicate we have not printed a symbol
         
-        BRA     DLOOPITER
+        BRA     DLOOPITER   * Move on to next iteration
 
 
-DINVALID
+DINVALID * This label handles the case where the bit rotated out was invalid
+        
+        CMPI    #1,D3   * Were we in a range?
+        BNE     DLOOPITER * If not, next iteration
+        
+        MOVE.B  #0,D3   * If we were, we are not anymore
+        
+        CMPI    #1,D7   * Was the # of registers in the range greater than one?
+        BLT     DLOOPITERCLR * No, different case
+        
+        LEA     ASCII_D,A1  * Load 'D'
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
+        
+        MOVE.L  D5,D1   * Move the register to print
+        
+        ADDI    #-1,D1  * Print out previous reg, it was the last in the range
+        
+        MOVE.B  #3,D0   * Indicate task #3
+        TRAP    #15     * Perform trap task #3
+        
+        CLR.L   D7  * Clear the number in range counter
+        
+        BRA     DLOOPITER * Move on to the next iteration
+        
+DLOOPITERCLR * This label handles ranges of size == 1
+       
+        CLR.L   D7 * Simply clear the # in range counter
 
-        * were we in a range? if so, print last register, set D3 to zero branch to next iteration also set D6 to 0
+DLOOPITER * This label is the next iteration of the loop
         
-        CMPI    #1,D3
-        BNE     DLOOPITER
-        
-        MOVE.B  #0,D3
-        
-        CMPI    #1,D7
-        BLT     DLOOPITERCLR
-        
-        LEA     ASCII_D,A1
-        MOVE.B  #14,D0
-        TRAP    #15
-        
-        MOVE.L  D5,D1
-        
-        ADDI    #-1,D1 * print out previous reg #, it was the last in the range
-        
-        MOVE.B  #3,D0
-        TRAP    #15
-        
-        CLR.L   D7
-        
-        BRA     DLOOPITER
-        
-DLOOPITERCLR        
-        CLR.L   D7
+        CMPI    #8,D5 * Are we done with the data registers yet?
+        BEQ     DLOOPDONE * Yes
 
-DLOOPITER
-        
-        CMPI    #8,D5
-        BEQ     DLOOPDONE
-
-        ADDI    #1,D5
-        BRA     DLOOP
+        ADDI    #1,D5   * No, incriment counter
+        BRA     DLOOP   * Back to start of loop
 
 DLOOPDONE
 
@@ -2826,107 +2817,104 @@ DLOOPDONE
         CLR.L   D7  * count of registers in a range
         MOVE.B  #1,D6 * to fix fencepost issue     
 
-ALOOP * loop to print out the data register portion of the addresses being saved
+ALOOP * loop to print out the address register portion of data regs being saved
 
-        ROR     #1,D2
-        BCS     AVALID
+        ROR     #1,D2   * Rotate one bit out of D2
+        BCS     AVALID  * Was the bit set?
         
-        BRA     AINVALID
+        BRA     AINVALID  * No it was not
         
-AVALID
-        CMPI    #0,D3
-        BEQ     AFORWARDVALID * we are not in a range
+AVALID * This lable handles cases where the bit rotated out was true
+
+        CMPI    #0,D3   * Are we in a range?
+        BEQ     AFORWARDVALID * We are not in a range
         
-        ADDI    #1,D7 *increment number of regs in range
+        ADDI    #1,D7 * Increment number of regs in range
         
-        CMPI    #1,D6   *have we already printed a symbol?
-        BEQ     ALOOPITER
+        CMPI    #1,D6   * Have we already printed a symbol?
+        BEQ     ALOOPITER * If so, next iteration
         
-        LEA     DASH,A1    *print a dash
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     DASH,A1 * Load '-'
+        MOVE.B  #14,D0  * Indicate task #14
+        TRAP    #15     * Perform trap task #14
         
-        MOVE.B  #1,D6 * indicates a symbol has been printed
+        MOVE.B  #1,D6 * Indicate a symbol has been printed
         
-        BRA     ALOOPITER
+        BRA     ALOOPITER * Move to next iteration of the loop
         
-AFORWARDVALID
-        * not in a range yet, print
-        
+AFORWARDVALID * This label handles the case where the bit rotated out was true
                 
-        CMPI    #0,D4
-        BEQ     ANOSLASH
+        CMPI    #0,D4   * Have we printed anything?
+        BEQ     ANOSLASH * If not, don't print a slash
                 
-        LEA     SLASH,A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     SLASH,A1    * Load '/'
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-ANOSLASH
+ANOSLASH * This label handles the true case without printing a slash
 
-        MOVE.B  #1,D4   * we have printed something, now slashes are fair game
+        MOVE.B  #1,D4   * We have printed a register, now we can print slash
         
-        MOVE.B  #1,D6   * we have printed a symbol
+        MOVE.B  #1,D6   * Indicate a symbol has been printed
         
-        LEA     ASCII_A,A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     ASCII_A,A1  * Load 'A'
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        MOVE.L  D5,D1
+        MOVE.L  D5,D1  * Load the loop counter into D1 to print
         
-        ADDI    #-8,D1 * it's A, need to adjust by 8
+        ADDI    #-8,D1 * For A, need to adjust by 8
         
-        MOVE.B  #3,D0
-        TRAP    #15
+        MOVE.B  #3,D0   * Indicate task #3
+        TRAP    #15     * Perform trap task #3
 
-        MOVE.B  #1,D3   * set to 1 to indicate we are in a range
-        MOVE.B  #0,D6   * set to 0 to indicate we have not printed a symbol
+        MOVE.B  #1,D3   * Set to 1 to indicate we are in a range
+        MOVE.B  #0,D6   * Set to 0 to indicate we have not printed a symbol
         
-        BRA     ALOOPITER
+        BRA     ALOOPITER * MOve on to the next iteration of the loop
 
 
-AINVALID
-
-        * were we in a range? if so, print last register, set D3 to zero branch to next iteration also set D6 to 0
+AINVALID * This label handles the case where the bit rotated out was invalid
         
-        CMPI    #1,D3
-        BNE     ALOOPITER
+        CMPI    #1,D3   * Were we in a range?
+        BNE     ALOOPITER * If not, move on to the next iteration
         
-        MOVE.B  #0,D3
+        MOVE.B  #0,D3   * If we were, we are not anymore
         
-        CMPI    #1,D7
-        BLT     ALOOPITERCLR
+        CMPI    #1,D7   * Was there more than one value in the range?
+        BLT     ALOOPITERCLR * No, just clear the count and move to next iter
         
-        LEA     ASCII_A,A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LEA     ASCII_A,A1  * Load 'A'
+        MOVE.B  #14,D0      * Indicate task #14
+        TRAP    #15         * Perform trap task #14
         
-        MOVE.L  D5,D1
+        MOVE.L  D5,D1  * Move the loop counter into D1
         
         ADDI    #-1,D1 * print out previous reg #, it was the last in the range
         ADDI    #-8,D1 * it's A, need to adjust by 8
         
-        MOVE.B  #3,D0
-        TRAP    #15
+        MOVE.B  #3,D0   * Indicate task #3
+        TRAP    #15     * Perform trap task #3
         
-        CLR.L   D7
+        CLR.L   D7  * Clear the count of registers in the range
         
-        BRA     ALOOPITER
+        BRA     ALOOPITER * Move on to the next loop iteration
         
-ALOOPITERCLR
+ALOOPITERCLR * This label handles the case the range was less than 2
         
-        CLR.L   D7
+        CLR.L   D7 * Simply clear the number of registers in range
 
-ALOOPITER
+ALOOPITER * This label is the next iteration of the loop
         
-        CMPI     #16,D5
-        BEQ     ALOOPDONE
+        CMPI    #16,D5  * Are we done yet?
+        BEQ     ALOOPDONE * If yes, branch to ALOOPDONE
 
-        ADDI    #1,D5
-        BRA     ALOOP
+        ADDI    #1,D5 * Increment loop counter
+        BRA     ALOOP * Start the loop over again
 
-ALOOPDONE
+ALOOPDONE *Branch to this label when we are done
         
-        MOVEM    (A7)+,D0-D7/A0-A6
+        MOVEM    (A7)+,D0-D7/A0-A6 * Restore registers
         RTS
 
         
@@ -2947,38 +2935,41 @@ ALOOPDONE
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 MOVEMHELPERPRE
 
-    MOVEM   D1-D7,-(A7)
+    MOVEM   D1-D7,-(A7) * Save registers
 
     MOVE.W  (A2),D2 * move the data we need to proccess into D2
-    MOVE.L  #0,D4
-    CLR.L    D7 * put the flipped bits here
     
-    *the following block of code moves bits
-    *into the same position they would be in if
-    *the MOVEM was post inc, then simply uses post
-    *inc to print the registers being saved
-PRELOOP
-    ROL.W   #1,D2
+    MOVE.L  #0,D4   * To be used as a loop counter
     
-    BCS     PRESETBIT
-    BRA     PRELOOPITER
+    CLR.L   D7 * put the flipped bits here
     
-PRESETBIT
-    BSET    D4,D7
+PRELOOP * The start of the loop
 
-PRELOOPITER
-    CMPI    #15,D4
-    BEQ     PRELOOPDONE
+    ROL.W   #1,D2 * Rotate one bit out of the OP
     
-    ADDI    #1,D4
-    BRA     PRELOOP
+    BCS     PRESETBIT * If set, branch here
+    
+    BRA     PRELOOPITER * If we hit this, it was not set
+    
+PRESETBIT * This label handles the case if the bit rotated out was set
 
-PRELOOPDONE
+    BSET    D4,D7 * set the bit in the result
 
-    MOVE.W  D7,(A2)    
-    MOVEM   (A7)+,D1-D7
+PRELOOPITER * This label handles the case if the bit rotated out was not set
 
-    BSR MOVEMHELPERPOST
+    CMPI    #15,D4 * Are we done manipulating bits?
+    BEQ     PRELOOPDONE * If yes, branch here
+    
+    ADDI    #1,D4 * If not, incriment
+    BRA     PRELOOP * and start the loop again
+
+PRELOOPDONE * This label is branched to when the loop is finished
+
+    MOVE.W  D7,(A2) * Move the result of our bit manipulation into (A2)
+    
+    MOVEM   (A7)+,D1-D7 * Restore registers
+
+    BSR MOVEMHELPERPOST * Now the bits are in the same format as if were post
 
     RTS
 
@@ -3000,26 +2991,26 @@ PRELOOPDONE
 * REGISTERS:      a
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 UNKNOWNOP
-        MOVEM   D0-D7/A0-A1,-(A7)
+        MOVEM   D0-D7/A0-A1,-(A7) * Save registers
         
         LEA     DATA,A1 * load " DATA $" into register A1
         MOVE.L  #14,D0  * print the string stored in A1
         TRAP    #15
         
-        LSL.L   #8,D2
-        LSL.L   #8,D2
+        LSL.L   #8,D2   * Shift out un-needed info
+        LSL.L   #8,D2   * Shift out un-needed info
         
-        MOVE.L  D2,A6
+        MOVE.L  D2,A6   * Move the opcode to A6 to be printed
         
-        MOVE.L  #4,D3
+        MOVE.L  #4,D3   * Indicate number of nibbles to print
         
-        BSR     PRINT_ASCII_HEX_CHAR
+        BSR     PRINT_ASCII_HEX_CHAR * Print the hex
 
         LEA     NEWLINE,A1 * load newline into register A1
         MOVE.L  #14,D0  * print the string stored in A1
         TRAP    #15
 
-        MOVEM   (A7)+,D0-D7/A0-A1
+        MOVEM   (A7)+,D0-D7/A0-A1 * Restore registers
         RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -3447,6 +3438,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
