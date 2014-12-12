@@ -1294,8 +1294,75 @@ OP1010
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1011
 
-    BSR     UNKNOWNOP
-    RTS
+        MOVEM   D0-D7/A0-A1,-(A7)   * Saving values to the stack
+
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        * Check to see if opmode is unsupported for both EOR and CMP
+        CMPI    #%0000000011000000, D6      * Is the OPMODE 011, unsupported by EOR/CMP?
+        BEQ     UNKNOWN1011                 * If so, the OP is unknown
+        CMPI    #%0000000111000000, D6      * Is the OPMODE 111, unsupported by EOR/CMP?
+        BEQ     UNKNOWN1011                 * If so, the OP is unknown
+        
+        * Check to see if it is CMP
+        CMPI    #%0000000000000000, D6      * Is the OPMODE 000, a BYTE for CMP?
+        BEQ     NOTEOR                      * If so, the OP is CMP
+        CMPI    #%0000000001000000, D6      * Is the OPMODE 000, a WORD for CMP?
+        BEQ     NOTEOR                      * If so, the OP is CMP
+        CMPI    #%0000000010000000, D6      * Is the OPMODE 000, a LONG for CMP?
+        BEQ     NOTEOR                      * If so, the OP is CMP
+
+        * Check to see EA mode is 001, unsupported by EOR
+        MOVE.W  #3, D6              * Prep lower value for bitmask
+        MOVE.W  #5, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000001000000, D6      * Is the mode 001, unsupported for EOR?
+        BEQ     UNKNOWN1011                 * If so, the op is unknown
+        
+        * Verified to be EOR at this point
+        LEA     EOROP,A1            * We found EOR
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+        BRA     DISPLAY1011         * Branch to the end of 1011       
+
+NOTEOR
+        LEA     CMPOP,A1            * We found CMP
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+DISPLAY1011
+        BSR     SIZE68
+        
+        BSR     EAHELPER05
+        
+        LEA     COMMA,A1            * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+        BCLR    #6,D2               * Bit manipulation is 
+        BCLR    #7,D2               * necessary in order to make
+        BCLR    #8,D2               * EAHELPER611 work generically
+        
+        BSR     EAHELPER611         * Print out EA
+        
+        LEA     NEWLINE,A1          * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+        BRA     DONE1011            * Branch to end 1011 and move to next op
+        
+UNKNOWN1011
+        BSR     UNKNOWNOP           * Unknown op
+                 
+DONE1011
+        MOVEM   (A7)+,D0-D7/A0-A1   * Done identifying op
+        RTS                         * Return to main
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -2337,34 +2404,47 @@ END67
 * REGISTERS:      a
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 SIZE68
-        * finish later, need to follow the same format as SIZE67
-        
-        
+
         MOVEM   D0-D7/A0-A6, -(A7)  * Save values to return to original when done
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #8, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
-        AND     D2,D6               * Apply bitmask          
-        
-        CMPI    #%0000000000000000, D6   * is it a BYTE?
-        BSR     PRINTBYTE               * Branch to handle BYTE sizes
-        CMPI    #%0000000100000000, D6   * is it a BYTE?
-        BSR     PRINTBYTE               * Branch to handle BYTE sizes 
+        AND     D2,D6               * Apply bitmask       
+
+        CMPI    #%0000000000000000, D6  * is it a BYTE?
+        BEQ     PRINTBYTE68               * Branch to handle BYTE sizes
+        CMPI    #%0000000100000000, D6  * is it a BYTE?
+        BEQ     PRINTBYTE68               * Branch to handle BYTE sizes 
       
-        CMPI    #%0000000001000000, D6   * is it a WORD?
-        BSR     PRINTWORD               * Branch to handle BYTE sizes
-        CMPI    #%0000000101000000, D6   * is it a WORD?
-        BSR     PRINTWORD               * Branch to handle BYTE sizes
-        CMPI    #%0000000011000000, D6   * is it a WORD (ADDA)?
-        BSR     PRINTWORD               * Branch to handle BYTE sizes
+        CMPI    #%0000000001000000, D6  * is it a WORD?
+        BEQ     PRINTWORD68               * Branch to handle BYTE sizes
+        CMPI    #%0000000101000000, D6  * is it a WORD?
+        BEQ     PRINTWORD68               * Branch to handle BYTE sizes
+        CMPI    #%0000000011000000, D6  * is it a WORD (ADDA)?
+        BEQ     PRINTWORD68               * Branch to handle BYTE sizes
 
-        CMPI    #%0000000010000000, D6   * is it a LONG?
-        BSR     PRINTLONG               * Branch to handle BYTE sizes
-        CMPI    #%0000000110000000, D6   * is it a LONG?
-        BSR     PRINTLONG               * Branch to handle BYTE sizes
-        CMPI    #%0000000111000000, D6   * is it a LONG (ADDA)?
-        BSR     PRINTLONG               * Branch to handle BYTE sizes
+        CMPI    #%0000000010000000, D6  * is it a LONG?
+        BEQ     PRINTLONG68               * Branch to handle BYTE sizes
+        CMPI    #%0000000110000000, D6  * is it a LONG?
+        BEQ     PRINTLONG68               * Branch to handle BYTE sizes
+        CMPI    #%0000000111000000, D6  * is it a LONG (ADDA)?
+        BEQ     PRINTLONG68               * Branch to handle BYTE sizes
 
+        BRA     END68
+        
+PRINTBYTE68
+        BSR     PRINTBYTE
+        BRA     END68
+
+PRINTWORD68
+        BSR     PRINTWORD
+        BRA     END68
+        
+PRINTLONG68
+        BSR     PRINTLONG
+        BRA     END68
+
+END68
         MOVEM   (A7)+,D0-D7/A0-A6       * Pop off the stack to return our registers
         RTS                             * Return. Size handling is finished.
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
@@ -3000,6 +3080,8 @@ NEWLINE     DC.B    CR,LF,0
 
 * ---> OPS
 DIVSOP      DC.B    'DIVS',0
+CMPOP       DC.B    'CMP',0
+EOROP       DC.B    'EOR',0
 NOOPERATION DC.B    'NOP',0
 NEGOP       DC.B    'NEG',0
 MOVEOP      DC.B    'MOVE',0
@@ -3094,10 +3176,20 @@ __COUNTER   DS.B    1       * main loop counter
 *-----------------------------------------------------------------------------
 * SECTION: Sample program to run, then attempt testing disassembly on.
 * STARTING: 16384
-* ENDING:   16420
+* ENDING:   Any even number before 16384 to continue FOREVER
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
     ORG $4000
     
+    CMP.B   D0,D1
+    CMP.W   D1,D2
+    CMP.L   D2,D3
+    CMP     A0,D1
+    CMP     (A2)+,D1
+    EOR.B   D0,D1
+    EOR.W   D1,D2
+    EOR.L   D2,D3
+    EOR     D0,(A0)
+    EOR     D1,(A1)+
     ORI.B   #3,D0 
     ORI.W   #$290,D2
     ORI.L   #%1010,D7   * $1010 == A
@@ -3149,6 +3241,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
