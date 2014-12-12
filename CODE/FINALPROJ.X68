@@ -437,40 +437,36 @@ END0000
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0001  
         MOVEM   D0-D7/A0-A1,-(A7)   * Push vales onto stack
+        
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #8, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
+        
         AND     D2,D6               * Apply bitmask
         
-        * I may have fucked off this part, sorry - Caleb
-        * CMPI    #%0000000001000000, D6  * Is the destination mode 001?
-        * BNE     UNKNOWNOP0001                 * If so, it's unknown.
+        CMPI    #%0000000001000000,D6
+        BNE     OP0001MOVE
         
+        LEA     MOVEAOP,A1   * Put 'MOVE' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
+        
+        BRA     OP0001MOVEA
+        
+OP0001MOVE
+
         LEA     MOVEOP,A1   * Put 'MOVE' into the window
         MOVE.B  #14,D0      * Trap #14 to print out
         TRAP    #15         * Perform Trap #14
         
-        *-----------------------------------------------------------
-        * the following code is to move the size bits into the
-        * 0-1 positions of D3 so that eahelper05 case use that as a "parameter"
-        * for eahelper05
+OP0001MOVEA
+
+        LEA     __B,A1   * Put 'MOVE' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
         
-        MOVE.W  #12, D6              * Prep lower value for bitmask
-        MOVE.W  #13, D7              * Prep upper value for bitmask
-        BSR     BITMASK              * Finalize bitmask setup
-        AND     D2,D6                * Apply bitmask
+        MOVE.L  #1,D3
         
-        LSR     #8,D6
-        LSR     #4,D6
-        
-        CLR     D3
-        
-        MOVE.B  D6,D3
-        
-        *---------------------------------------------------------------
-        
-        
-        BSR     SIZE67
         BSR     EAHELPER05
         
         LEA     COMMA,A1
@@ -484,9 +480,6 @@ OP0001
         TRAP    #15
         
         BRA     ENDOP0001
-        *LEA     __B,A1      * Put '.B' into the window
-        *MOVE.B  #14,D0      * Trap #14 to print out
-        *TRAP    #15         * Perform Trap #14
         
 UNKNOWNOP0001
         BSR     UNKNOWNOP
@@ -495,7 +488,6 @@ ENDOP0001
         MOVEM (A7)+,D0-D7/A0-A1
         RTS        
         
-        * TODO: DETERMINE THE MODE AND REG FOR DESTINATION AND SOURCE
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -511,10 +503,59 @@ ENDOP0001
 *                 actual instruction.
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
-OP0010
+OP0010  
+        MOVEM   D0-D7/A0-A1,-(A7)   * Push vales onto stack
+        
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000001000000,D6
+        BNE     OP0010MOVE
+        
+        LEA     MOVEAOP,A1   * Put 'MOVE' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
+        
+        BRA     OP0010MOVEA
+        
+OP0010MOVE
 
-    BSR     UNKNOWNOP
-    RTS
+        LEA     MOVEOP,A1   * Put 'MOVE' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
+        
+OP0010MOVEA
+
+        LEA     __L,A1   * Put 'MOVE' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
+        
+        MOVE.L  #3,D3
+        
+        BSR     EAHELPER05
+        
+        LEA     COMMA,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BSR     EAHELPER611
+        
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BRA     ENDOP0010
+        
+UNKNOWNOP0010
+        BSR     UNKNOWNOP
+        
+ENDOP0010
+        MOVEM (A7)+,D0-D7/A0-A1
+        RTS        
+
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -530,24 +571,59 @@ OP0010
 *                 actual instruction.
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
-OP0011
-    MOVEM   D0-D7/A0-A6, -(A7)
-    
-    *MOVE.W  #6,D6
-    *MOVE.W  #8,D7
-    
-    *BSR     BITMASK
-    
-    *AND.W   D2,D6
-    
-    *CMP     #%0000000001000000,D6
-    *BNE     NEXT15
-    *BSR     * for MOVEA.W
-    
-    MOVEM   (A7)+,D0-D7/A0-A6
-    
-    BSR     UNKNOWNOP
-    RTS
+OP0011  
+        MOVEM   D0-D7/A0-A1,-(A7)   * Push vales onto stack
+        
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000001000000,D6
+        BNE     OP0011MOVE
+        
+        LEA     MOVEAOP,A1   * Put 'MOVE' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
+        
+        BRA     OP0011MOVEA
+        
+OP0011MOVE
+
+        LEA     MOVEOP,A1   * Put 'MOVE' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
+        
+OP0011MOVEA
+
+        LEA     __W,A1   * Put 'MOVE' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
+        
+        MOVE.L  #2,D3
+        
+        BSR     EAHELPER05
+        
+        LEA     COMMA,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BSR     EAHELPER611
+        
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BRA     ENDOP0011
+        
+UNKNOWNOP0011
+        BSR     UNKNOWNOP
+        
+ENDOP0011
+        MOVEM (A7)+,D0-D7/A0-A1
+        RTS        
+
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -801,6 +877,10 @@ NOTMOVEM *JSR
         MOVE.B  #14,D0          * Print space
         TRAP    #15
         
+        LEA     DOLLAR,A1
+        MOVE.B  #14,D0          * Print $
+        TRAP    #15
+        
         * print out where we are jumping to
         
         MOVE.L  (A2)+,D2 * read in the next word of the instruction
@@ -892,8 +972,6 @@ NOTRTS  *LEA
         
         CMPI    #%0000000000111000,D6
         BEQ     TWOWORDLEA          * it's a two word LEA
-        
-        * check to make sure it is a supported mode and size
         
         LEA     LEAOP,A1
         MOVE.B  #14,D0          * Print LEA
@@ -1929,6 +2007,8 @@ ENDEAHELPER611
 * PRE-CONDITION:  D2 contains the instruction to print modes for. Only call
 *                 this sub-routine helper for operations that only have one
 *                 mode register.
+*                 D3 contains the size of immediate it could be, 1 = byte
+*                 2 = word, 3 = long
 * POST-CONDITION: Determines mode, passes D2 to REGHELPER to print.
 * REGISTERS:      a
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
@@ -2036,15 +2116,15 @@ NOTADRINDIRECTPRE
     MOVE.B  #14,D0
     TRAP    #15
     
-    MOVE.W  #0, D6              * Prep lower value for bitmask
-    MOVE.W  #7, D7              * Prep upper value for bitmask
+    MOVE.L  #0, D6              * Prep lower value for bitmask
+    MOVE.L  #7, D7              * Prep upper value for bitmask
     BSR     BITMASK             * Finalize bitmask setup
         
     MOVE.W  (A2)+,D1
     
     AND.L     D6,D1
         
-    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
+    MOVE.B  #3,D0   
     TRAP    #15      * Perform Trap #3
     
     BRA     ENDEAHELPER05
@@ -2058,15 +2138,15 @@ NOTIMMBYTE
     MOVE.B  #14,D0
     TRAP    #15
     
-    MOVE.W  #0, D6              * Prep lower value for bitmask
-    MOVE.W  #15, D7             * Prep upper value for bitmask
+    MOVE.L  #0, D6              * Prep lower value for bitmask
+    MOVE.L  #15, D7             * Prep upper value for bitmask
     BSR     BITMASK             * Finalize bitmask setup
         
     MOVE.W  (A2)+,D1
     
-    AND.L     D6,D1               * Apply bitmask
+    AND.L    D6,D1               * Apply bitmask
         
-    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
+    MOVE.B  #3,D0   
     TRAP    #15      * Perform Trap #3
     
     BRA     ENDEAHELPER05
@@ -2080,11 +2160,6 @@ NOTIMMWORD
     TRAP    #15
         
     MOVE.L  (A2)+,D1
-        
-    MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
-    TRAP    #15      * Perform Trap #3
-    
-    MOVE.W  (A2)+,D1
         
     MOVE.B  #3,D0   * Indicate we are using trap #15, 15 to in a certain #base
     TRAP    #15      * Perform Trap #3
@@ -3098,6 +3173,7 @@ EOROP       DC.B    'EOR',0
 NOOPERATION DC.B    'NOP',0
 NEGOP       DC.B    'NEG',0
 MOVEOP      DC.B    'MOVE',0
+MOVEAOP      DC.B   'MOVEA',0
 MOVEMOP     DC.B    'MOVEM',0
 JSROP       DC.B    'JSR',0
 RTSOP       DC.B    'RTS',0
@@ -3210,6 +3286,10 @@ __COUNTER   DS.B    1       * main loop counter
     NOP
     MOVE.B   #%10011010, D0
     MOVE.B   #%10101001, D1
+    MOVE.W   #%10011010, D0
+    MOVE.W   #%10101001, D1
+    MOVE.L   #70000, D0
+    MOVE.L   #70000, D1
     DIVS     #1, D0
     ADD.B    D0,D1
     MOVEM    (A7)+,A2-A5/D1/D3-D4
@@ -3255,6 +3335,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
