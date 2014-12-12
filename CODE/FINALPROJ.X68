@@ -562,7 +562,6 @@ OP0011
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0100  
-        * TODO: movem
 
         MOVEM   D0-D1/A0-A1,-(A7) * Push values to the stack to save
         
@@ -795,32 +794,42 @@ NOTMOVEM *JSR
         BNE     NOTJSR          * it's not JSR
         
         LEA     JSROP,A1
-        MOVE.B  #14,D0          * Print a newline and JSR
+        MOVE.B  #14,D0          * Print JSR
         TRAP    #15
         
         LEA     SPACE,A1
-        MOVE.B  #14,D0          * Print a newline and JSR
+        MOVE.B  #14,D0          * Print space
         TRAP    #15
         
         * print out where we are jumping to
         
-        MOVE.W  (A2)+,D2 * read in the next word of the instruction 
+        MOVE.L  (A2)+,D2 * read in the next word of the instruction
+
+        MOVE.L  D2,D7
+
+        MOVE.L  D7,A6
         
-        MOVE.L  D2,D1   * save the opcode to print
+        CLR.L   D3
         
-        MOVE.L  #16,D2  * set the base to 16
+        MOVE.B  #8,D3
         
-        MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
-        TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
+        BSR     PRINT_ASCII_HEX_CHAR
         
-        MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+        *MOVE.L  D2,D1   * save the opcode to print
         
-        MOVE.L  D2,D1   * save the opcode to print
+        *MOVE.L  #16,D2  * set the base to 16
         
-        MOVE.L  #16,D2  * set the base to 16
+        *MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
+        *TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
         
-        MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
-        TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
+        *MOVE.W  (A2)+,D2        * simply used to advance the pointer, since it is a two word OP
+        
+        *MOVE.L  D2,D1   * save the opcode to print
+        
+        *MOVE.L  #16,D2  * set the base to 16
+        
+        *MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
+        *TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
         
         LEA     NEWLINE,A1
         MOVE.B  #14,D0          * Print a newline
@@ -2015,7 +2024,7 @@ NOTADRINDIRECTPOST * address register indirect, pre decrement
      
     BRA     ENDEAHELPER05
 
-NOTADRINDIRECTPRE * if none of the previous cases are true, it is a mode not supported by our decompiler
+NOTADRINDIRECTPRE
 
     CMPI    #%0000000000111000,D6 * is it immediate?
     BNE     NOTIMMEDIATE
@@ -2803,26 +2812,26 @@ PRELOOPDONE
 * REGISTERS:      a
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 UNKNOWNOP
-        MOVE.L  A2,D1   * Prep the add to print
-        SUB.L   #2,D1   * Off by two error due to post increment correct
-        MOVE.L  D2,D3   * Save the opcode to print
-        
-        MOVE.L  #16,D2  * set the base to 16
-        MOVE.L  #15,D0  * set D0 to 15 to indicate we are converting to a different base
-        TRAP    #15     * Perform Trap #15, 15 to print out mem add in hex
+        MOVEM   D0-D7/A0-A1,-(A7)
         
         LEA     DATA,A1 * load " DATA $" into register A1
         MOVE.L  #14,D0  * print the string stored in A1
         TRAP    #15
         
-        MOVE.L  D3,D1   * move the opcode from D3 into D1 to print
-        MOVE.B  #15,D0   * Indicate we are using trap #15, 15 to in a certain #base
-        TRAP    #15      * Perform Trap #3
+        LSL.L   #8,D2
+        LSL.L   #8,D2
+        
+        MOVE.L  D2,A6
+        
+        MOVE.L  #4,D3
+        
+        BSR     PRINT_ASCII_HEX_CHAR
 
         LEA     NEWLINE,A1 * load newline into register A1
         MOVE.L  #14,D0  * print the string stored in A1
         TRAP    #15
 
+        MOVEM   (A7)+,D0-D7/A0-A1
         RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -2836,7 +2845,7 @@ UNKNOWNOP
 * PRE-CONDITION:  A6 contains the register of memory to print.
 *                 This parameter would be pre-loaded by, for example:
 *                 "LEA FOO_BAR_ADDR,A6" or "LEA $1234FEED,A6"
-*                 D3 contains the loops to do (number of bytes).
+*                 D3 contains the loops to do (number of nibbles).
 * POST-CONDITION: 
 * REGISTERS:      
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
@@ -3211,6 +3220,7 @@ __COUNTER   DS.B    1       * main loop counter
     MULS    D0, D7
     MULS    (A1)+, D2
     NOP
+    AND.L   D2,D3
     SUBQ    #8, D6
     NOP
     SUBQ.L  #7, D1
@@ -3245,6 +3255,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
