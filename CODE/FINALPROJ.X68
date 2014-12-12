@@ -26,7 +26,7 @@
 *-----------------------------------------------------------
 * Title      : 68K Decompiler
 * Written by : Nick Bell, Sammy Nimnuch, Caleb Larson
-* Date       : 11/2014 -> 12/2014
+* Date       : 11/2014
 * Description: This program decompiles other 68K programs
 *              which are loaded into the simulator simultaneously.
 *-----------------------------------------------------------
@@ -50,6 +50,8 @@ OP_1110     EQU     %1110000000000000
 OP_1111     EQU     %1111000000000000
 HEX_VALUE_MASK_LONG EQU     $0000000F  * mask a hex value in 32-bits
 
+* BITMASK     EQU     $F000       * used to bitmask the first nibble
+
 START:  ORG    $1000            * first instruction of program
 
 * -----------------------------------
@@ -57,49 +59,59 @@ START:  ORG    $1000            * first instruction of program
 * -----------------------------------
 *-----------------------------------------------------------------------------
 *-----------------------------------------------------------------------------
-* NAME: START OF PROGRAM
-* DESCRIPTION:    Grab the starting and ending address for the program
-* PRE-CONDITION:  
-* POST-CONDITION: 
-* REGISTERS:      
+* NAME: x
+* DESCRIPTION:    a
+* PRE-CONDITION:  b
+* POST-CONDITION: c
+* REGISTERS:      d
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 
 * THINK ABOUT ASKING FOR VALID START/END NO NEGATIVE ADDR
 
-        LEA     MSGSTART,A1     * Load MESSAGE START, asking for input
+* LOAD MSGSTART, ASK FOR INPUT
+        LEA     MSGSTART,A1     * Load MESSAGE START
         MOVE.B  #14,D0          * Trap #14 to display message
         TRAP    #15             * Perform #14
         
+* GETS THE STARTING ADDRESS
         MOVE.B  #4,D0           * Trap #4 gets an input and stores in D1
-        TRAP    #15             * Perform Trap #15
+        TRAP    #15             * Perform #15
+        
+* MOVE IT TO ANOTHER ADDRESS REGISTER
         MOVEA.L D1,A2           * Move the user input into A2. This is the starting address.
 
-        LEA     MSGEND,A1       * Load MESSAGE END, asking for input
-        MOVE.W  #14,D0          * Trap #14 to display MESGEND
+* LOAD MSGSTART, ASK FOR INPUT
+        LEA     MSGEND,A1       * Load MESSAGE END
+        MOVE.W  #14,D0          * Trap #14 to display message
         TRAP    #15             * Perform #14
         
+* GETS THE ENDING ADDRESS
         MOVE.B  #4,D0           * Trap #4 gets an input and stores in D1
-        TRAP    #15             * Perform Trap #4 to get the ending address
+        TRAP    #15             * Perform Trap #4
         MOVE.L  D1,D5           * Move the ending address into D5
-        LEA     NEWLINE,A1      * Store newline variable for seperate opcodes
+        LEA     NEWLINE,A1      * Store newline variable for seper opcodes
         
         MOVE.W  #15,D7          * prep D7 for bitmask subroutine
         MOVE.W  #12,D6          * prep D6 for bitmask subroutine
         BSR     BITMASK         * obtain a bitmask that goes from 12-15 (inclusive)
+        * MOVE.W  D6,D2           * move the bitmask to D2
         
-        CLR     (__COUNTER)     * setup for the counter
-        MOVE    #0,(__COUNTER)  * setup for the counter        
+        CLR     (__COUNTER)              * setup the counter
+        MOVE    #0,(__COUNTER)           
         
         BSR     CLEAR_SCREEN    * clear the prompt for start/end ADDR's
-
 LOOP    
-        MOVE.L  A2,A6           * Copy the starting address into A6   
-        MOVE.L  #8,D3           * Move #8 into D3 to indicate the size
-        BSR     PRINT_ASCII_HEX_CHAR    * Subroutine to print out the char without Trap Task #15
+        MOVE.L  A2,A6
+        MOVE.L  #8,D3
+        BSR     PRINT_ASCII_HEX_CHAR
+        
+        *MOVE.W  A2,D1           * print what address we are processing
+        *MOVE.B  #3,D0
+        *TRAP    #15
         
         LEA     SPACE,A1        * print a space to seperate the address from the data
-        MOVE.W  #14,D0          * Trap #14 to display the SPACE
-        TRAP    #15             * Perform Trap #15
+        MOVE.W  #14,D0
+        TRAP    #15
 
         MOVE    D6,-(A7)        * save the bitmask on the stack
         MOVE.W  (A2)+,D2        * Read an operation into D2
@@ -186,13 +198,13 @@ NOT1110
         BRA     ITERATION       * Move to next iteration of the loop
         
 LOOPUNKNOWNOP
-        BSR     UNKNOWNOP       * Fail case
+        BSR     UNKNOWNOP
         
 ITERATION
         MOVE    (A7)+,D6        * restore the bitmask to its previous state
     
-        ADDI    #1,(__COUNTER)  * Track the lines on screen
-        CMPI    #30,(__COUNTER) * Has the counter reached 30?
+        ADDI    #1,(__COUNTER)           * Track the lines on screen
+        CMPI    #30,(__COUNTER)
         BNE     END_OF_LOOP     * Not at 30, go loop more
         BSR     IDLE_STATE      * Break to idle, ask to clear screen
 
@@ -200,34 +212,32 @@ END_OF_LOOP
         CMP     A2,D5           * Compare the starting address to ending address
         BEQ     END             * If they are equal, branch 
         BRA     LOOP            * Otherwise, branch back to LOOP
-        
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
-
 IDLE_STATE
-    LEA     CONT_MSG,A1     * show msg to hit enter in order to continue
-    MOVE.B  #14,D0          * Trap #14 to show CONT_MSG
-    TRAP    #15             * Perform Trap #14
+    LEA     CONT_MSG,A1 * show msg to hit enter in order to continue
+    MOVE.B  #14,D0
+    TRAP    #15
     
-    MOVE.B  #4,D0           * trap task 4 for input
-    TRAP    #15             * Perform Trap #15
-    CMPI    #$D,D1          * Compare 13 (Enter) to D1
+    MOVE.B  #4,D0 * trap task 4 - input
+    TRAP    #15
+    CMPI    #$D,D1
     
-    BSR     CLEAR_SCREEN    * Clear everything, so ready to output another 30
-    CLR.L   (__COUNTER)     * Reset the counter
-    RTS                     * Done with IDLE State
-    
+    BSR     CLEAR_SCREEN * clear everything, so ready to output another 30
+    CLR.L   (__COUNTER)
+    RTS
 CLEAR_SCREEN
-    MOVE.B  #11,D0          * Move #11 into D0 for Trap Task #11
-    MOVE.W  #$FF00,D1       * To clear screen, set D1.W to $FF00
-    TRAP    #15             * Perform Trap #11
-    RTS                     * Return to IDLE_STATE
+    MOVE.B  #11,D0
+    MOVE.W  #$FF00,D1
+    TRAP    #15
+    RTS
+
 
 *-----------------------------------------------------------------------------
 *-----------------------------------------------------------------------------
 * NAME: OP_0000   (BCLR, ORI, CMPI)
 * DESCRIPTION:    Determines the instruction by using bit-level logic.
-* PRE-CONDITION:  
+* PRE-CONDITION:  xyz
 * POST-CONDITION: All registers return to their previous state, and the output
 *                 goes to the output console for reading the raw data or the
 *                 actual instruction.
@@ -359,16 +369,16 @@ IMD_SIZE_0000
                
         * Grab immediate data
         MOVE.W (A2)+, D5            * Move the pointer, and store it in D3
-        LSL.L   #8, D5              * LSL to get one nibble 
-        LSL.L   #8, D5              * LSL to get the next nibble
-        MOVE.L  D5, A6              * Store D5 into A6 for PRINT_ASCII_HEX_CHAR
-        MOVE.L  #4, D3              * Move #4 into D3 to display four bits
+        LSL.L   #8, D5               
+        LSL.L   #8, D5
+        MOVE.L  D5, A6
+        MOVE.L  #4, D3
         BSR     PRINT_ASCII_HEX_CHAR
 
         CMPI    #%0000000010000000, D6   * See if the size is a LONG
         BNE     SKIPLONG    
         
-        * Grab next word, if necessary
+        * Grab next word
         MOVE.W (A2)+, D5            * Move the pointer, and store it in D3
         LSL.L   #8, D5              * LSL to get first nibble of the word
         LSL.L   #8, D5              * LSL to get second nibble of the word
@@ -404,7 +414,7 @@ NOTORI  * Possible option left is CMPI
         BRA     IMD_SIZE_0000       * Get immediate value and end opcode 0000
         
 UNKNOWN0000
-        BSR     UNKNOWNOP           * Unknown op
+        BSR     UNKNOWNOP          * Unknown op
 
 END0000          
         MOVEM   (A7)+,D0-D7/A0-A1   * Push values to the stack to save
@@ -431,50 +441,52 @@ OP0001
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #8, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
+        
         AND     D2,D6               * Apply bitmask
         
-        CMPI    #%0000000001000000,D6   * Is the move 001, an aspect of MOVEA?
-        BNE     OP0001MOVE              * If not, branch to only print out MOVE
+        CMPI    #%0000000001000000,D6
+        BNE     OP0001MOVE
         
-        * Confirmed MOVEA at this point
-        LEA     MOVEAOP,A1      * Put 'MOVEA' into the window
-        MOVE.B  #14,D0          * Trap #14 to print out
-        TRAP    #15             * Perform Trap #14
+        LEA     MOVEAOP,A1   * Put 'MOVE' into the window
+        MOVE.B  #14,D0      * Trap #14 to print out
+        TRAP    #15         * Perform Trap #14
         
-        BRA     OP0001MOVEA     * Continue with printing out size, registers, etc.
+        BRA     OP0001MOVEA
         
 OP0001MOVE
+
         LEA     MOVEOP,A1   * Put 'MOVE' into the window
         MOVE.B  #14,D0      * Trap #14 to print out
         TRAP    #15         * Perform Trap #14
         
 OP0001MOVEA
 
-        LEA     __B,A1      * Put '.B' into the window
+        LEA     __B,A1   * Put 'MOVE' into the window
         MOVE.B  #14,D0      * Trap #14 to print out
         TRAP    #15         * Perform Trap #14
         
-        MOVE.L  #1,D3       * Move #1 into D3 as a size parameter for EAHELPER05
-        BSR     EAHELPER05  * Perform EAHELPER05
+        MOVE.L  #1,D3
         
-        LEA     COMMA,A1    * Load ',' into the window
-        MOVE.B  #14,D0      * Trap #14 to print out
-        TRAP    #15         * Perform Trap #14
+        BSR     EAHELPER05
         
-        BSR     EAHELPER611 * Perform EAHELPER611 for Destination Reg and Mode
+        LEA     COMMA,A1
+        MOVE.B  #14,D0
+        TRAP    #15
         
-        LEA     NEWLINE,A1  * Load a newline into the window
-        MOVE.B  #14,D0      * Trap #14 to print it out
-        TRAP    #15         * Perform trap #14
+        BSR     EAHELPER611
         
-        BRA     ENDOP0001   * Move to next iteration
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BRA     ENDOP0001
         
 UNKNOWNOP0001
-        BSR     UNKNOWNOP   * Op is unknown
+        BSR     UNKNOWNOP
         
 ENDOP0001
-        MOVEM (A7)+,D0-D7/A0-A1 * Pop values back
-        RTS                     * Move to next iteration
+        MOVEM (A7)+,D0-D7/A0-A1
+        RTS        
         
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -1312,59 +1324,35 @@ OP1000
         MOVE.B  #14,D0              * Trap #14 prints out a comma
         TRAP    #15                 * Perform Trap #14
         
-        * bit manipulation is needed to make DIVS work
+        * bit manipulation is needed to make the outlier DIVS work
         * with the generic EAHELPER611
-        BCLR    #6,D2               * This signifies that
-        BCLR    #7,D2               * we are dealing with
-        BCLR    #8,D2               * a data register
-     
+        BCLR    #6,D2
+        BCLR    #7,D2
+        BCLR    #8,D2
+        
+        * the above bits were cleared so that eahelper05 knows the destination
+        * is a data register.
+        
         BSR     EAHELPER611 
 
         LEA     NEWLINE,A1          * We found DIVS
         MOVE.B  #14,D0              * Trap #14 prints out the data
         TRAP    #15                 * Perform Trap #14
         
-        BRA     OP1000END           * Move onto next iteration
+        BRA     OP1000END
         
-NOTDIVS 
-        * Checking for invalid OPMODEs 011 and 111
-        CMPI    #%0000000011000000, D6      * Is the OPMODE 011, unsupported by OR?
-        BEQ     UNKNOWN1000                 * If so, the OP is unknown
-        CMPI    #%0000000111000000, D6      * Is the OPMODE 111, unsupported by OR?
-        BEQ     UNKNOWN1000                 * If so, the OP is unknown
-
-        * It is confirmed OR at this point
+NOTDIVS * It is confirmed OR at this point
         LEA     OROP,A1         * We found OR
         MOVE.B  #14,D0          * Trap #14 prints out the data
         TRAP    #15             * Perform Trap #14
-
-        BSR     SIZE68          * print out the size
-        
-        BSR     EAHELPER05      * print out the EA
-        
-        LEA     COMMA,A1        * formatting
-        MOVE.B  #14,D0          * Trap #14 prints out comma
-        TRAP    #15             * Perform Trap #1
-        
-        * bit manipulation is needed to make EAHELPER611 work
-        BCLR    #6,D2           
-        BCLR    #7,D2
-        BCLR    #8,D2
-             
-        BSR     EAHELPER611      * Print out register  
-        
-        LEA     NEWLINE,A1       * formatting
-        MOVE.B  #14,D0           * Trap #14 prints out comma
-        TRAP    #15              * Perform Trap #1
-        
-        BRA     DONE1001         * pop values back
-        
-UNKNOWN1000
-        BSR     UNKNOWNOP       * Op is unknown
+        *================================================================
+        * todo, move the size of the operation into the leading bits of D5
+        * before subroutine call
+        BSR     EAHELPER611
 
 OP1000END
-        MOVEM   (A7)+,D0-D7/A0-A1   * pop values back
-        RTS                         * return to main
+        MOVEM   (A7)+,D0-D7/A0-A1
+        RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
 
@@ -1375,7 +1363,7 @@ OP1000END
 * NAME: OP_1001   (SUB)
 * DESCRIPTION:    Determines the instruction by using bit-level logic.
 * PRE-CONDITION:  xyz
-* POST-COND        BSR     SIZE68      * pr    int out the sizesizeate, and the output
+* POST-CONDITION: All registers return to their previous state, and the output
 *                 goes to the output console for reading the raw data or the
 *                 actual instruction.
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
@@ -3385,8 +3373,6 @@ __COUNTER   DS.B    1       * main loop counter
     
     SUB     D0,D1
     SUB     A2,D2   * Should be invalid since this is SUBA
-    OR      D2,D3
-    OR.L    (A2),D2
     CMP.B   D0,D1
     CMP.W   D1,D2
     CMP.L   D2,D3
@@ -3417,18 +3403,28 @@ __COUNTER   DS.B    1       * main loop counter
     MULS.W  #3, D7
     MULS    D0, D7
     MULS    (A1)+, D2
+    NOP
     AND.L   D2,D3
     SUBQ    #8, D6
+    NOP
     SUBQ.L  #7, D1
+    NOP
     ORI     #4, D1
+    NOP
     LSL.L   #1,D1
+    NOP
     LSR.L   #2,D1
+    NOP
     ASL.L   #3,D1
+    NOP
     ASR.L   #4,D1
+    NOP
     ROL.L   #5,D1
+    NOP
     ROR.L   #8,D1
+    NOP
     BCLR    #2,D1
-
+    NOP
 SOMELABLE
     ADDA.W  D1,A5
     NOP
@@ -3445,8 +3441,6 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
-
-
 
 
 
