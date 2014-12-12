@@ -2475,8 +2475,6 @@ DINVALID
         MOVE.B  #3,D0
         TRAP    #15
         
-        CLR.L   D7
-        
         BRA     DLOOPITER
         
 DLOOPITERCLR        
@@ -2579,8 +2577,6 @@ AINVALID
         
         MOVE.B  #3,D0
         TRAP    #15
-        
-        CLR.L   D7
         
         BRA     ALOOPITER
         
@@ -3052,8 +3048,7 @@ __D7        DC.B   'D7',0
     MOVE.B   #%10011010, D0
     MOVE.B   #%10101001, D1
     ADD.B    D0,D1
-    MOVEM    (A7)+,A2-A5/D1/D3-D4/D6
-    MOVEM    A2-A5/D1/D3-D4/D6,-(A7)
+    MOVEM    (A7)+,A2-A5/D1/D3-D4
     LEA      JSROP,A1
     NEG.W    -(A7)
     JSR      END
@@ -3082,8 +3077,6 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
-
-
 
 
 
