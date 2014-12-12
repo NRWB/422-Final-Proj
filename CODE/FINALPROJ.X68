@@ -1344,7 +1344,85 @@ OP1000END
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1001
+        MOVEM   D0-D7/A0-A1,-(A7)   * Saving values to the stack
+        
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        * Check to see if opmode is unsupported for both EOR and CMP
+        CMPI    #%0000000011000000, D6      * Is the OPMODE 011, unsupported by SUB?
+        BEQ     UNKNOWN1001                 * If so, the OP is unknown
+        CMPI    #%0000000111000000, D6      * Is the OPMODE 111, unsupported by SUB?
+        BEQ     UNKNOWN1001                 * If so, the OP is unknown
+          
+        * Check to see if the opmode is EA v Dn -> Dn
+        CMPI    #%0000000000000000, D6      * Is the OPMODE 000, a BYTE for EA v DN?
+        BEQ     SUB_EA_DN                   * If so, branch to SUB_EA_DN
+        CMPI    #%0000000001000000, D6      * Is the OPMODE 001, a WORD for EA v DN?
+        BEQ     SUB_EA_DN                   * If so, branch to SUB_EA_DN
+        CMPI    #%0000000010000000, D6      * Is the OPMODE 010, a LONG for EA v DN?
+        BEQ     SUB_EA_DN                   * If so, branch to SUB_EA_DN
+        
+        * Need to see if the size is a BYTE and the mode is An direct
+        * Since this is not supported
+        MOVE.W  #3, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000100001000, D6      * Is the mode 001 and is a byte?
+        BEQ     UNKNOWN1001                 * If so, unsupported op
+        
+        * Verified to be SUB_DN_EA here
+        CMPI    #%0000000000000000, D6      * Is the  000, a BYTE for EA v DN?
+        BEQ     SUB_EA_DN                   * If so, branch to SUB_EA_DN
 
+PRINT1001   
+        LEA     SUBOP,A1    * We found SUB
+        MOVE.B  #14,D0      * Trap #14 prints out a comma
+        TRAP    #15         * Perform Trap #14
+        
+        BSR     SIZE68      * print out the size
+        
+        BSR     EAHELPER05
+        
+        * bit manipulation is needed to make EAHELPER611 work
+        BCLR    #6,D2
+        BCLR    #7,D2
+        BCLR    #8,D2
+             
+        LEA     COMMA,A1            * formatting
+        MOVE.B  #14,D0              * Trap #14 prints out comma
+        TRAP    #15                 * Perform Trap #1
+        
+        BSR     EAHELPER611 
+        
+        LEA     NEWLINE,A1          * formatting
+        MOVE.B  #14,D0              * Trap #14 prints out comma
+        TRAP    #15                 * Perform Trap #1
+        
+        BRA     DONE1001
+        
+SUB_EA_DN
+        * SUBA is not supported and must be checked
+        MOVE.W  #3, D6              * Prep lower value for bitmask
+        MOVE.W  #5, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000000001000, D6      * Is the mode 001, an unsupported mode for SUB?
+        BEQ     UNKNOWN1001                 * If so, branch to UNKNOWN100
+        
+        BRA     PRINT1001           * Verified to be valid at this point
+        
+UNKNOWN1001
+        BSR     UNKNOWNOP           * Unknown op
+        
+DONE1001
+        MOVEM   (A7)+,D0-D7/A0-A1   * Return vales
+        RTS                         * Return to main
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -3190,6 +3268,7 @@ ASLOP       DC.B    'ASL',0
 ASROP       DC.B    'ASR',0
 ROLOP       DC.B    'ROL',0
 ROROP       DC.B    'ROR',0
+SUBOP       DC.B    'SUB',0
 DATA        DC.B    ' DATA $',0
 OP_BCC_MSG  DC.B    'BCC ',0
 OP_BCS_MSG  DC.B    'BCS ',0
@@ -3269,6 +3348,8 @@ __COUNTER   DS.B    1       * main loop counter
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
     ORG $4000
     
+    SUB     D0,D1
+    SUB     A2,D2   * Should be invalid since this is SUBA
     CMP.B   D0,D1
     CMP.W   D1,D2
     CMP.L   D2,D3
@@ -3335,6 +3416,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
