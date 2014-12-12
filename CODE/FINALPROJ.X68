@@ -245,15 +245,8 @@ CLEAR_SCREEN
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP0000
         MOVEM   D0-D7/A0-A1,-(A7)   * Push values to the stack to save
-        MOVE.W  #6, D6              * Prep lower value for bitmask
-        MOVE.W  #8, D7              * Prep upper value for bitmask
-        BSR     BITMASK             * Finalize bitmask setup
-        AND     D2,D6               * Apply bitmask
-        
-        CMPI    #%0000000110000000, D6  * Are we BCLR Dynamic?
-        BNE     NOTBCLRDYNA             * If not, branch to BCLR Static or other ops
-        
-        * Checking for unsupported mode
+                      
+        * Checking for unsupported mode (An) for BCLR, ORI, and CMPI
         MOVE.W  #3, D6              * Prep lower value for bitmask
         MOVE.W  #5, D7              * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
@@ -262,7 +255,16 @@ OP0000
         CMPI    #%0000000000001000, D6  * Is the mode An, an unsupported mode?
         BEQ     UNKNOWN0000             * If so, the op is unknown
         
-        * Confirmed BCLR at this point
+        * Checking for BCLR Dynamic
+        MOVE.W  #6, D6              * Prep lower value for bitmask
+        MOVE.W  #8, D7              * Prep upper value for bitmask
+        BSR     BITMASK             * Finalize bitmask setup
+        AND     D2,D6               * Apply bitmask
+        
+        CMPI    #%0000000110000000, D6  * Are we BCLR Dynamic?
+        BNE     NOTBCLRDYNA             * If not, branch to BCLR Static or other ops
+
+        * Confirmed BCLR Dynamic at this point
         LEA     BCLROP,A1           * We found BCLR
         MOVE.B  #14,D0              * Trap #14 prints out the data
         TRAP    #15                 * Perform Trap #14
@@ -293,7 +295,7 @@ OP0000
         
         BRA     END0000             * Found the op, move to next iteration
         
-NOTBCLRDYNA
+NOTBCLRDYNA     * Possible options left are BCLR Static, ORI, and CMPI
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #11, D7             * Prep upper value for bitmask
         BSR     BITMASK             * Finalize bitmask setup
@@ -301,15 +303,6 @@ NOTBCLRDYNA
         
         CMPI    #%0000100010000000, D6  * Are we BCLR Static?
         BNE     NOTBCLR                 * If not, branch to other functions
-        
-        * Checking for unsupported mode
-        MOVE.W  #3, D6              * Prep lower value for bitmask
-        MOVE.W  #5, D7              * Prep upper value for bitmask
-        BSR     BITMASK             * Finalize bitmask setup
-        AND     D2,D6               * Apply bitmask
-        
-        CMPI    #%0000000000001000, D6  * Is the mode An, an unsupported mode?
-        BEQ     UNKNOWN0000             * If so, the op is unknown
         
         * Confirmed BCLR Static at this point
         LEA     BCLROP,A1           * We found BCLR
@@ -354,20 +347,12 @@ NOTBCLR * Possible options left are ORI or CMPI
         CMPI    #%0000000011000000, D6  * Are bits 6,7 == 1,1?
         BEQ     UNKNOWN0000             * If so, unknown op. 
         
-        * Mode check to see if unsupported ORI mode
-        MOVE.W  #3, D6              * Prep lower value for bitmask
-        MOVE.W  #5, D7              * Prep upper value for bitmask
-        BSR     BITMASK             * Finalize bitmask setup
-        AND     D2,D6               * Apply bitmask
-        
-        CMPI    #%0000000000001000, D6  * Is the mode An, an unsupported mode?
-        BEQ     UNKNOWN0000             * If so, unknown op. 
-        
         * Confirmed ORI at this point
         LEA     ORIOP, A1           * Load 'ORI' into the output window
         MOVE.B  #14,D0              * Trap #14 prints out the data in D0
         TRAP    #15                 * Perform Trap #14
-        
+
+IMD_SIZE_0000        
         BSR     SIZE67              * Print the size
 
         * Mode check to see the size
@@ -421,14 +406,19 @@ NOTORI  * Possible option left is CMPI
         CMPI    #%0000110000000000, D6  * Are we CMPI?
         BNE     UNKNOWN0000             * If not, unknown op
         
-        * TODO: Continue checking for CMPI validity
+        * Confirmed CMPI at this point
+        LEA     CMPIOP, A1          * Formatting
+        MOVE.B  #14,D0              * Trap #14 prints out the data
+        TRAP    #15                 * Perform Trap #14
+        
+        BRA     IMD_SIZE_0000       * Get immediate value and end opcode 0000
         
 UNKNOWN0000
         BSR     UNKNOWNOP          * Unknown op
-        
+
 END0000          
-       MOVEM   (A7)+,D0-D7/A0-A1   * Push values to the stack to save
-       RTS
+        MOVEM   (A7)+,D0-D7/A0-A1   * Push values to the stack to save
+        RTS
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -969,7 +959,6 @@ DONE0100
         MOVEM   (A7)+,D0-D1/A0-A1 * Pop off the stack to return our registers
         RTS
         
-        BRA     ITERATION
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
       
@@ -3109,16 +3098,19 @@ __COUNTER   DS.B    1       * main loop counter
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
     ORG $4000
     
+    ORI.B   #3,D0 
+    ORI.W   #$290,D2
+    ORI.L   #%1010,D7   * $1010 == A
+    ORI     #2,D3
     NOP
     MOVE.B   #%10011010, D0
     MOVE.B   #%10101001, D1
+    DIVS     #1, D0
     ADD.B    D0,D1
     MOVEM    (A7)+,A2-A5/D1/D3-D4
     LEA      JSROP,A1
     NEG.W    -(A7)
     JSR      END
-    DIVS    #1, D0
-    BCLR    D0, D1
     MULS.W  #3, D7
     MULS    D0, D7
     MULS    (A1)+, D2
@@ -3157,6 +3149,7 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
 
 
 
