@@ -1151,7 +1151,7 @@ UNKNOWN0101
 *                Greater Than     -    GT    - 1110
 *                Less or Equal    -    LE    - 1111
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
-OP0110  MOVEM.L D0-D7/A0-A6,-(A7) * Save main method routine vars to stack
+OP0110  MOVEM.L D0-D7/A0-A1/A6,-(A7) * Save main method routine vars to stack
                         
         MOVE.W  #9,D6  * Move in 9 to D6
         MOVE.W  #11,D7 * Move in 11 to D7
@@ -1199,34 +1199,59 @@ OP_BRANCHES_PRINT
         BSR     BITMASK               * Call BITMASK sub-routine, return in D6
         AND     D2,D6                 * AND mask with op bits, get last 8 bits in D6
         
-*        CMPI    #%00000000,D6         * all 0's == word offset
-*        BEQ     BCC_WORD_OFFSET
+        CMPI    #%00000000,D6         * all 0's == word offset
+        BEQ     BCC_WORD_OFFSET
         
-*        CMPI    #%11111111,D6         * all F's == long offset
-*        BEQ     BCC_LONG_OFFSET
+        CMPI    #%11111111,D6         * all F's == long offset
+        BEQ     BCC_LONG_OFFSET
 BCC_BYTE_OFFSET
-        CLR     (A4)
-        MOVE.L  D6,A4
-        LEA     (A4),A1
-        MOVE.B  #14,D0
-        TRAP    #15
+        LSL.L   #8,D6
+        LSL.L   #8,D6
+        LSL.L   #8,D6
+        
+        MOVE.L  D6,A6
+        MOVE.L  #2,D3
+        
+        BSR     PRINT_ASCII_HEX_CHAR
+        
         LEA     NEWLINE,A1
         MOVE.B  #14,D0
         TRAP    #15
         
         BRA     BCC_END
-*BCC_WORD_OFFSET
-*        MOVEM.W (A2)+,A1
-*        MOVE.B  #13,D0
-*        TRAP    #15
-*        BRA     BCC_END
-*BCC_LONG_OFFSET
-*        MOVEM.L (A2)+,A1
-*        MOVE.B  #13,D0
-*        TRAP    #15
-*        BRA     BCC_END
+BCC_WORD_OFFSET
+
+        MOVE.W  (A2)+,D6
+
+        LSL.L   #8,D6
+        LSL.L   #8,D6
+        
+        MOVE.L  D6,A6
+        MOVE.L  #4,D3
+        
+        BSR     PRINT_ASCII_HEX_CHAR
+        
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BRA     BCC_END
+BCC_LONG_OFFSET
+
+        MOVE.L  (A2)+,D6
+
+        MOVE.L  D6,A6
+        MOVE.L  #8,D3
+        
+        BSR     PRINT_ASCII_HEX_CHAR
+        
+        LEA     NEWLINE,A1
+        MOVE.B  #14,D0
+        TRAP    #15
+        
+        BRA     BCC_END
 BCC_END * reload the memory, call RTS
-        MOVEM   (A7)+,D0-D7/A0-A6 * Pop off the stack to return our registers
+        MOVEM.L (A7)+,D0-D7/A0-A1/A6 * Pop off the stack to return our registers
         RTS
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
@@ -2244,9 +2269,7 @@ NOTIMMWORD
     
     BRA     ENDEAHELPER05
 
-NOTIMMEDIATE    
-
-
+NOTIMMEDIATE
     BSR     UNKNOWNOP
     
 ENDEAHELPER05
@@ -3402,11 +3425,13 @@ __COUNTER   DS.B    1       * main loop counter
     NOP
     BCLR    #2,D1
     NOP
+SOMELABLE
     ADDA.W  D1,A5
     NOP
     ADD.B   D3,D4
     NOP
     BRA     RLLYEND
+    BCS     SOMELABLE
 
 END
     RTS
@@ -3416,6 +3441,10 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
+
+
+
+
 
 
 
