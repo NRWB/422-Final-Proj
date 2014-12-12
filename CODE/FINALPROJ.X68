@@ -1644,7 +1644,7 @@ UNKNOWN1100
 * REGISTERS:      D0, D1 (output), D2 (op-code), D6 (bitmask)
 *-----------------------[+]START CODE BLOCK SEGMENT[+]------------------------
 OP1101
-        MOVEM.L A0-A6/D0-D7,-(A7)
+        MOVEM.L A0-A6/D0-D7,-(A7)   * Callee saved, move memory onto stack for saving
 		
         MOVE.W  #6, D6              * Prep lower value for bitmask
         MOVE.W  #8, D7              * Prep upper value for bitmask
@@ -1652,117 +1652,117 @@ OP1101
         AND     D2,D6               * Apply bitmask
         LSR     #6,D6
 
-		CMPI.B	#%0000000000000000,D6
-		BEQ		BYTE_EA_DN
+		CMPI.B	#%0000000000000000,D6   * Compare bits for 000 (base 2)
+		BEQ		BYTE_EA_DN              
 
-		CMPI.B	#%0000000000000001,D6
+		CMPI.B	#%0000000000000001,D6   * Compare bits for 001 (base 2)
 		BEQ		WORD_EA_DN
 
-		CMPI.B	#%0000000000000010,D6
+		CMPI.B	#%0000000000000010,D6   * Compare bits for 010 (base 2)
 		BEQ		LONG_EA_DN
 
-		CMPI.B	#%0000000000000011,D6
+		CMPI.B	#%0000000000000011,D6   * Compare bits for 011 (base 2)
 		BEQ		ADDA_WORD_OP
 
-		CMPI.B	#%0000000000000100,D6
+		CMPI.B	#%0000000000000100,D6   * Compare bits for 100 (base 2)
 		BEQ		BYTE_DN_EA
 
-		CMPI.B	#%0000000000000101,D6
+		CMPI.B	#%0000000000000101,D6   * Compare bits for 101 (base 2)
 		BEQ		WORD_DN_EA
 
-		CMPI.B	#%0000000000000110,D6
+		CMPI.B	#%0000000000000110,D6   * Compare bits for 110 (base 2)
 		BEQ		LONG_DN_EA
 
-		CMPI.B	#%0000000000000111,D6
+		CMPI.B	#%0000000000000111,D6   * Compare bits for 111 (base 2)
 		BEQ		ADDA_LONG_OP
 
-		BRA     ADD_ADDA_END
+		BRA     ADD_ADDA_END            * Not known, break to end of routine/exit
 		
 BYTE_EA_DN
     	BSR		ADD_EA_DN_GENERIC       * print out 'ADD' base op name for ADDA too
 
-    	LEA		__B,A1                  * print out size
+    	LEA		__B,A1                  * print out size (Byte)
     	MOVE.B	#14,D0
     	TRAP	#15
 
     	BSR     ADD_ADDA_SPACE          * print out space
-    	BRA     ADD_ADDA_PRINT
+    	BRA     ADD_ADDA_PRINT          * go to specific printing now
 
 WORD_EA_DN
-    	BSR		ADD_EA_DN_GENERIC
+    	BSR		ADD_EA_DN_GENERIC       * print out 'ADD' base op name for ADDA too
 
-    	LEA		__W,A1
+    	LEA		__W,A1                  * print out size (Word)
     	MOVE.B	#14,D0
     	TRAP	#15
     	
-        BSR     ADD_ADDA_SPACE
-        BRA     ADD_ADDA_PRINT
+        BSR     ADD_ADDA_SPACE          * print out space
+        BRA     ADD_ADDA_PRINT          * go to specific printing now
     	
 LONG_EA_DN
-	    BSR		ADD_EA_DN_GENERIC
+	    BSR		ADD_EA_DN_GENERIC       * print out 'ADD' base op name for ADDA too
 
-    	LEA		__L,A1
+    	LEA		__L,A1                  * print out size (Long)
     	MOVE.B	#14,D0
     	TRAP	#15
 
-    	BSR     ADD_ADDA_SPACE
-        BRA     ADD_ADDA_PRINT
+    	BSR     ADD_ADDA_SPACE          * print out space
+        BRA     ADD_ADDA_PRINT          * go to specific printing now
     	
 ADDA_WORD_OP
-	    BSR		ADD_EA_DN_GENERIC
+	    BSR		ADD_EA_DN_GENERIC       * print out 'ADD' base op name for ADDA too
 
-    	LEA		ASCII_A,A1
+    	LEA		ASCII_A,A1              * Print out the ASCII character A (for ADD-'A')
     	MOVE.B	#14,D0
     	TRAP	#15
 
-    	LEA		__W,A1
+    	LEA		__W,A1                  * print out size (Word)
     	MOVE.B	#14,D0
     	TRAP	#15
     	
-        BRA     ADDA_PRT
+        BRA     ADDA_PRT                * go to specific printing now
     	
 BYTE_DN_EA
-	    BSR     ADD_EA_DN_GENERIC
+	    BSR     ADD_EA_DN_GENERIC       * print out 'ADD' base op name for ADDA too
 	    
-    	LEA		__B,A1
+    	LEA		__B,A1                  * print out size (Byte)
     	MOVE.B	#14,D0
     	TRAP	#15
     	
-        BSR     ADD_ADDA_SPACE
-        BRA     ADD_ADDA_PRINT
+        BSR     ADD_ADDA_SPACE          * print out space
+        BRA     ADD_ADDA_PRINT          * go to specific printing now
 
 WORD_DN_EA
-    	BSR     ADD_EA_DN_GENERIC
+    	BSR     ADD_EA_DN_GENERIC       * print out 'ADD' base op name for ADDA too
 
-    	LEA		__W,A1
+    	LEA		__W,A1                  * print out size (Word)
     	MOVE.B	#14,D0
     	TRAP	#15	
 
-    	BSR     ADD_ADDA_SPACE
-        BRA     ADD_ADDA_PRINT
+    	BSR     ADD_ADDA_SPACE          * print out space
+        BRA     ADD_ADDA_PRINT          * go to specific printing now
 
 LONG_DN_EA
-    	BSR     ADD_EA_DN_GENERIC
+    	BSR     ADD_EA_DN_GENERIC       * print out 'ADD' base op name for ADDA too
     	
-       	LEA		__L,A1
+       	LEA		__L,A1                  * print out size (Long)
     	MOVE.B	#14,D0
     	TRAP	#15		
     	
-        BSR     ADD_ADDA_SPACE
-    	BRA     ADD_ADDA_PRINT
+        BSR     ADD_ADDA_SPACE          * print out space
+    	BRA     ADD_ADDA_PRINT          * go to specific printing now
 
 ADDA_LONG_OP
-    	BSR		ADD_EA_DN_GENERIC
+    	BSR		ADD_EA_DN_GENERIC       * print out 'ADD' base op name for ADDA too
     	
-    	LEA		ASCII_A,A1
+    	LEA		ASCII_A,A1              * Print out the ASCII character A (for ADD-'A')
     	MOVE.B	#14,D0
     	TRAP	#15
     	
-        LEA		__L,A1
+        LEA		__L,A1                  * print out size (Long)
     	MOVE.B	#14,D0
     	TRAP	#15
     	
-        BRA     ADDA_PRT
+        BRA     ADDA_PRT                * go to specific printing now
         
 ADD_EA_DN_GENERIC
 		LEA		OP_ADD_MSG,A1           * print out 'ADD'
@@ -1771,32 +1771,32 @@ ADD_EA_DN_GENERIC
 		RTS
 		
 ADD_ADDA_SPACE
-        LEA		SPACE,A1
+        LEA		SPACE,A1                * print out ' ' (space)
     	MOVE.B	#14,D0
     	TRAP	#15
     	RTS
 
 ADDA_PRT
-        BSR     MODE_DN
-        LEA     COMMA,A1
+        BSR     MODE_DN                 * break to print out Dn reg
+        LEA     COMMA,A1                * print out a comma for separation
         MOVE.B  #14,D0
         TRAP    #15
-        BSR     MODE_AN
-        BRA     ADD_ADDA_END
+        BSR     MODE_AN                 * break to print out An reg
+        BRA     ADD_ADDA_END            * go to end of routine
 
 ADD_ADDA_PRINT
 
-        BSR     EAHELPER05          * Print out data. TODO: DOESN'T WORK.
+        BSR     EAHELPER05              * use ea helper sub routine for printing ADDA
 
-        LEA     COMMA,A1            * formatting
-        MOVE.B  #14,D0              * Trap #14 prints out a comma
-        TRAP    #15                 * Perform Trap #14
+        LEA     COMMA,A1                * print out a comma
+        MOVE.B  #14,D0             
+        TRAP    #15                
         
-        BSR     EAHELPER611
-        BRA     ADD_ADDA_END
+        BSR     EAHELPER611             * use ea helper sub routine for ADDA
+        BRA     ADD_ADDA_END            * go to end of routine
         
 ADD_ADDA_END
-        LEA     NEWLINE,A1
+        LEA     NEWLINE,A1              * print a newline, this ends the op
         MOVE.B  #14,D0
         TRAP    #15
         
@@ -3441,47 +3441,6 @@ RLLYEND
 
 *------------------------[+]END CODE BLOCK SEGMENT[+]-------------------------
 *-----------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 *~Font name~Courier New~
